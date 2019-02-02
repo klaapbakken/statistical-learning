@@ -7,4 +7,5 @@ install.packages("class")# for function knn
 install.packages("colorspace") #for nice colors in provided plotting code
 install.packages("caret") #for confusion matrices
 install.packages("pROC") #for ROC curves
-install.packages("tidyverse")
+install.packages("tidyverse") #for tidyverse
+install.packages("here") #to locate project root
