@@ -103,12 +103,27 @@ Mdf=data.frame(M,"istest"=as.factor(trte))
 ```
 
 **Q9:** 
-
+$\hat{y} = \hat{R}(Y = j|X = x_0) = \frac{1}{K}\sum\limits_{i\in\mathcal{N}_0}I(y_i = j)$
 
 **Q10:** 
-
 ```{r,eval=TRUE}
-# here you write your code
+ks = 1:30
+train.var = Mdf[Mdf$istest == 0, 2:3]
+test.var = Mdf[Mdf$istest == 1, 2:3]
+train.def = Mdf[Mdf$istest == 0, 1]
+test.def = Mdf[Mdf$istest == 1, 1]
+train.e = numeric(30)
+test.e = numeric(30)
+for (k in ks){
+  model1 <- class::knn(train = train.var, test = test.var, cl = train.def, k = k)
+  model2 <- class::knn(train = train.var, test = train.var, cl = train.def, k = k)
+  train.e[k] = sum(train.def!= model2)/nrow(train.var)
+  test.e[k] = sum(test.def != model1)/nrow(test.var)
+}
+min(train.e)
+which.min(train.e)
+min(test.e)
+which.min(test.e)
 ```
 
 
