@@ -115,15 +115,13 @@ test.def = Mdf[Mdf$istest == 1, 1]
 train.e = numeric(30)
 test.e = numeric(30)
 for (k in ks){
-  model1 <- class::knn(train = train.var, test = test.var, cl = train.def, k = k)
-  model2 <- class::knn(train = train.var, test = train.var, cl = train.def, k = k)
-  train.e[k] = sum(train.def!= model2)/nrow(train.var)
-  test.e[k] = sum(test.def != model1)/nrow(test.var)
+  model1 <- class::knn(train = train.var, test = test.var, cl = train.def, k = k, prob=TRUE)
+  model2 <- class::knn(train = train.var, test = train.var, cl = train.def, k = k, prob=TRUE)
+  train.e[k] = mean(train.def != model2)
+  test.e[k] = mean(test.def != model1)
 }
-min(train.e)
-which.min(train.e)
-min(test.e)
-which.min(test.e)
+train.e
+test.e
 ```
 
 
@@ -150,9 +148,9 @@ cv = sapply(ks, function(k){
 **Q11:** 
 
 ```{r, eval=FALSE}
-cv.e = # fill in
-cv.se = #fill in
-k.min = # fill in
+cv.e = colMeans(cv)
+cv.se = apply(cv,2,sd)/sqrt(5)
+k.min = which.min(cv.e)
 ```
 
 **Q12:** 
@@ -170,7 +168,7 @@ legend("topright", legend = c("Test", "5-fold CV", "Training"), lty = 1, col=co)
 ```
 
 **Q13:** 
-
+The strategy used in the first line is the \textit{one standard error rule}, which means that we choose the highest K for which $CV(\theta) \leq CV(\hat{\theta}) + SE(\hat{\theta})$, where $\hat{\theta}$ is k.min from **Q12**
 ```{r,eval=FALSE}
 k = tail(which(cv.e < cv.e[k.min] + cv.se[k.min]), 1)
 size = 100
@@ -191,9 +189,9 @@ box()
 
 
 **Q14:** 
-
+The optimal choice is $K = 30$ from **Q13**. 
 ```{r,eval=FALSE}
-K=# your choice from Q13
+K=30
   
 # knn with prob=TRUE outputs the probability of the winning class
 # therefore we have to do an extra step to get the probability of player 1 winning
@@ -205,6 +203,8 @@ KNNprob= ifelse(KNNclass == "0", 1-KNNprobwinning, KNNprobwinning)
 library(pROC)
 # now you use predictor=KNNprob and response=M[-tr,1] 
 # in your call to the function roc in the pROC library
+myRoc <- roc(response = M[-tr,1], predictor = KNNprob, auc = TRUE, ci = TRUE)
+plot.roc(myRoc, print.auc = TRUE)
 ```
 
 **Q15:**
