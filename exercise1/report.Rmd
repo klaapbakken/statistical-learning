@@ -208,9 +208,23 @@ plot.roc(myRoc, print.auc = TRUE)
 ```
 
 **Q15:**
-
+The argument which creates the lowest cv error
 ```{r,eval=TRUE}
-# here you write your code
+k = k.min
+size = 100
+xnew = apply(M[tr,-1], 2, function(X) seq(min(X), max(X), length.out=size))
+grid = expand.grid(xnew[,1], xnew[,2])
+grid.yhat = knn(M[tr,-1], M[tr,1], k=k, test=grid)
+np = 300
+par(mar=rep(2,4), mgp = c(1, 1, 0))
+contour(xnew[,1], xnew[,2], z = matrix(grid.yhat, size), levels=.5, 
+        xlab=expression("x"[1]), ylab=expression("x"[2]), axes=FALSE,
+        main = paste0(k,"-nearest neighbors"), cex=1.2, labels="")
+points(grid, pch=".", cex=1, col=grid.yhat)
+points(M[1:np,-1], col=factor(M[1:np,1]), pch = 1, lwd = 1.5)
+legend("topleft", c("Player 1 wins", "Player 2 wins"), 
+       col=c("red", "black"), pch=1)
+box()
 ```
 
 
