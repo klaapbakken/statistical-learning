@@ -221,12 +221,42 @@ $$
 \hat{\boldsymbol \beta}=({\bf X}^T{\bf X})^{-1}{\bf X}^T{\bf Y}
 $$
 
-**Q16:** 
+**Q16:**
 
+Utilizing that $\text{E}(Y) = X\beta$ and $\text{E}(CX) = C\text{E}(X)$ we obtain that $\hat{\beta}$ is an unbiased estimator for $\beta$.
+
+$$
+\text{E}(\hat{\beta}) = \text{E}\left[(X^TX)^{-1}X^T Y\right]  \\
+= (X^TX)^{-1}X^T\text{E}(Y) = (X^TX)^{-1}X^TX\beta \\
+= \beta
+$$
+By using that $\text{Cov}(CY) = C\text{Cov}(Y)C^T$ 
+we obtain 
+
+$$
+\text{Cov}(\hat{\beta}) = \text{Cov}\left[(X^TX)^{-1}X^TY\right] \\ 
+= (X^TX)^{-1}X^T\text{Cov}(Y)\left[(X^TX)^{-1}X^T\right]^T \\
+= \sigma^2(X^TX)^{-1}X^TX(X^TX)^{-1} \\ 
+= \sigma^2(X^TX)^{-1}
+$$
 **Q17:** 
+
+Using the same tools as above, we obtain
+
+$$
+\text{E}\left[\hat{f}(\bf{x}_0^T)\right] = \text{E}(\bf{x}_0^T\hat{\beta}) = \bf{x}_0^T\text{E}(\hat{\beta}) = x_0^T\beta
+$$
+$$
+\text{Var}\left[\hat{f}(\bf{x}_0^T)\right] = \text{Var}(\bf{x}_0^T\hat{\beta})
+= \bf{x}_0^T\text{Var}(Y)\bf{x}_0 \\ 
+= \bf{x}_0^T\sigma^2(X^TX)^{-1}\bf{x}_0
+
+$$
 
 **Q18:** 
 $$\text{E}[(Y_0-\hat{f}({\bf x}_0))^2]=[\text{E}(\hat{f}({\bf x}_0)-f({\bf x}_0)]^2+\text{Var}(\hat{f}({\bf x}_0) ) + \text{Var}(\varepsilon)$$
+
+
 
 Ridge estimator:
 $$
@@ -234,6 +264,15 @@ $$
 $$
 
 **Q19:** 
+
+We start off by noting that $\text{E}(f(\bf{x}_0)) = \text{E}(Y_0 - \epsilon) = \text{E}(\bf{x}_0^T\beta)$, which enables us to write $(\bf{x}_0^T - x_0^T\hat{\beta})^2$ as $\text{E}(f(\bf{x}_0) - \hat{f}(\bf{x}_0))^2$. The expression for $\text{E}\left[(Y_0 - \hat{f}(x_0))^2\right]$ becomes
+
+$$
+\text{E}\left[(Y_0 - \hat{f}(x_0))^2\right] =
+\text{Var}(Y_0 - \hat{f}(x_0)) + \text{E}(Y_0 - \hat{f}(\bf{x}_0))^2 \\
+= \text{Var}(\bf{x}_0^T\beta + \epsilon + \bf{x}_0^T\hat{\beta}) \\ + \text{E}(\bf{x}_0^T\beta + \epsilon + \bf{x}_0^T\hat{\beta})^2 \\
+= \text{Var}(\epsilon) + \text{Var}(\hat{f}(\bf{x}_0)) + \left(\text{E}\left[f(\bf{x}_0) - \hat{f}(\bf{x}_0)\right]\right)^2
+$$
 
 **Q20:** 
 
