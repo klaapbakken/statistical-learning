@@ -26,15 +26,52 @@ summary(modelA)
 ```
 
 **Q1:** 
+The equation for the fitted 'modelA' is
+$$\log(FEV) = -1.944 + +.0234 \times Age + 0.0168 \times Htcm + 0.0293 \times 
+GenderM - 0.0460 \times Smoke \, ,$$
+where `GenderM` is 0 if gender is female and 1 if gender is male. The true
+model is assumed to be
+$$\log(FEV) = \beta_0 + \beta_1 \times Age + \beta_2 \times Htcm + \beta_3
+\times GenderM + \beta_4 \times Smoke + \epsilon \, ,$$
+where $\epsilon \sim \mathcal{N}(0, \sigma^2)$.
 
 **Q2:** 
     
-* `Estimate` - in particular interpretation of `Intercept`
-* `Std.Error`
-* `Residual standard error`
-* `F-statistic`
+* `Estimate` values are the estimates of the coefficients 
+  $\hat{\beta}=(X^\intercal X)^{-1}X^\intercal Y$. The intercept 
+  estimate is the value of `log(FEV)` if all the
+  covariates are 0. For the covavariates the `Estimate` values say how much
+  `log(FEV)` increases with one covariate if all the other covariates are kept
+  constant (according
+  to the model). The model point estimate of `log(FEV)` for given covariate
+  values is found by using the formula in Q1. So if e.g. `Age` is increased by
+  1 and all the other covariates are kept constant, the estimate of `log(FEV)`
+  increases by 0.0234.
+* `Std.Error` is the standard error of the estimated coefficients (the values
+  under `Estimate`). This tells how much the estimates will vary if we repeat
+  the experiment with the same covariate values if our model assumptions are
+  true. The values are the diagonal elements of the coefficient estimate
+  covariance matrix $Cov(\hat{\beta})=(X^\intercal X)^{-1}\sigma^2$.
+* `Residual standard error` is an unbiased estimator for the standard deviation
+  of the error term $\epsilon$ in our model $y_i = \beta^\intercal x_i +
+  \epsilon$, where $\beta$ is the vector of coefficients and $x_i = (1, Age_i, 
+  Htcm_i, GenderM_i, Smoke_i)$. It is given by
+  $$RSE = \hat{\sigma} = \frac{RSS}{n-p-1} \, , \quad \text{where} \quad RSS = 
+  \sum_{i=1}^n(Y_i-\hat{Y})^2$$
+  and n is the number of observations.
+* `F-statistic` is a statistic for the null hypothesis 
+  $H_0:\beta_1=\beta_2=\beta_3=\beta_4=0$ vs the alternative hypothesis $H_1$:
+  not all the coefficients (except the intercept) are 0. The p-value is very
+  small, so in this case 
+  $H_0$ is clearly rejected. The value and the p-value is given by
+  $$F = \frac{(TSS-RSS)/p}{RSS/(n-p-1)} \, , \quad \text{where} \quad
+  TSS = \sum_{i=1}^n(Y_i-\bar{Y})^2 \, .$$
 
 **Q3:** 
+Multiple R-squared is the proportion of the variability in the response variable
+explained by the model, i.e.
+$$\frac{TSS-RSS}{TSS} \, .$$
+So here 81.06% of the variability is explained by the model.
 
 **Q4:**
 
@@ -60,23 +97,86 @@ library(nortest)
 ad.test(rstudent(modelA))
 ```
 
+The plot of standardized residuals shows that there is no clear trend, i.e. the
+residuals seem to be randomly distributed around 0 for all fitted values. We
+also can't see any covariance structure from this plot. So this plot does not
+indicate that any of our model assumptions are incorrect.
+
+The normal QQ-plot, however, shows that the standardized residuals are not 
+perfectly normally distributed. This is confirmed by the low p-value from the
+Anderson-Darling normality test, leading to rejection of the null hypothesis
+that the residuals are normally distributed.
+
 **Q5:** 
 
 ```{r,eval=TRUE}
-# here you write your code
+modelB = lm(FEV ~ Age + Htcm + Gender + Smoke, data=lungcap)
+summary(modelB)
+
+# residuals vs fitted
+ggplot(modelB, aes(.fitted, .stdresid)) + geom_point(pch = 21) +
+  geom_hline(yintercept = 0, linetype = "dashed") +
+  geom_smooth(se = FALSE, col = "red", size = 0.5, method = "loess") +
+  labs(x = "Fitted values", y = "Standardized residuals",
+       title = "Fitted values vs. Standardized residuals",
+       subtitle = deparse(modelB$call))
+
+# qq-plot of residuals
+ggplot(modelB, aes(sample = .stdresid)) +
+  stat_qq(pch = 19) + 
+  geom_abline(intercept = 0, slope = 1, linetype = "dotted") +
+  labs(x = "Theoretical quantiles", y = "Standardized residuals", 
+       title = "Normal Q-Q", subtitle = deparse(modelB$call))
+
+# normality test
+library(nortest) 
+ad.test(rstudent(modelB))
 ```
+The model with `FEV` as response instead of `log(FEV)` is fitted an testet in
+the code above. We see that the proportion of variability explained is somewhat
+smaller than before (77.54%). Also, the standardized residuals do not seem to
+be distributed around 0 for all fitted values. The studentized residuals are
+somewhat more likely to be normally distributed, but still get a p-value as low
+as 0.4% from the Anderson-Darling test. Notable is the fact that `Smoke` is no 
+longer considered to have a significant explanatory power, which makes room for
+a more parsimonous model. But all in all `modelA` is preferable, since our
+model assumptions seem more reasonable for `log(FEV)` as response.
 
 **Q6:** 
-
-```{r,eval=TRUE}
-# here you write your code if you have any
-```
+We wish to test $H_0: \beta_{Age} = 0$ against $H_1: \beta_{Age} \neq 0$. We
+use the test statistic
+$$T_{Age} = \frac{\hat{\beta}_{Age}}{\sqrt{c_jj}\hat{\sigma}} \sim t_{n-p-1} \,
+,$$
+where $c_jj$ is the second diagonal element of $X^\intercal X)^{-1}$. The
+calculations are already performed by `lm` and printed in the summary before.
+The t-value is 6.984, resulting in a p-value of 7.1e-12, so the null hypothesis
+is rejected at any reasonable signifiance level, i.e. `Age` has a significant 
+effect on the response. Common siginficance levels are 0.05 and 0.01.
 
 **Q7:** 
 
 ```{r,eval=TRUE}
-# here you write your code
+beta_age = modelA$coefficients[2][["Age"]]
+alpha = 0.01
+p = 4
+n = nrow(lungcap)
+t = dt(alpha/2, n-p-1)
+X = matrix(c(rep(1,n), lungcap[["Age"]], lungcap[["Htcm"]],
+             lungcap[["Gender"]], lungcap[["Smoke"]]), nrow=n, ncol=p+1)
+c = solve(t(X)%*%X)[2,2]
+sigma_hat = summary(modelA)$sigma
+CI99 = c(beta_age - t*sqrt(c)*sigma_hat, beta_age + t*sqrt(c)*sigma_hat)
+CI99
 ```
+
+A 99% confidence interval for $\beta_{Age}$ is found and printed about, using
+$$ P(\hat{\beta}_j-t_{\alpha/2,n-p-1}\sqrt{c_{jj}}\hat{\sigma}
+\le \beta_j \le \hat{\beta}_j+t_{\alpha/2,n-p-1}\sqrt{c_{jj}}\hat{\sigma})=
+1-\alpha \, .$$
+This interval tells us that when repeating the experiment and measuring the
+response over and over, 99% of such intervals will contain the true value
+$\beta_{age}$. Since the interval does not contain the value 0, we can say for
+sure that the p-value for the test in Q6 is less than 1%.
 
 
 **Q8:**
@@ -225,7 +325,7 @@ points(M[1:np,-1], col=factor(M[1:np,1]), pch = 1, lwd = 1.5)
 legend("topleft", c("Player 1 wins", "Player 2 wins"), 
        col=c("red", "black"), pch=1)
 box()
-```
+#```
 
 
 # Problem 3: Bias-variance trade-off 
