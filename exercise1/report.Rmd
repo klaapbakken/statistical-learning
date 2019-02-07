@@ -250,20 +250,10 @@ $$
 \text{Var}\left[\hat{f}(\bf{x}_0^T)\right] = \text{Var}(\bf{x}_0^T\hat{\beta})
 = \bf{x}_0^T\text{Var}(Y)\bf{x}_0 \\ 
 = \bf{x}_0^T\sigma^2(X^TX)^{-1}\bf{x}_0
-
 $$
 
 **Q18:** 
 $$\text{E}[(Y_0-\hat{f}({\bf x}_0))^2]=[\text{E}(\hat{f}({\bf x}_0)-f({\bf x}_0)]^2+\text{Var}(\hat{f}({\bf x}_0) ) + \text{Var}(\varepsilon)$$
-
-
-
-Ridge estimator:
-$$
-\widetilde{\boldsymbol \beta}=({\bf X}^T{\bf X}+\lambda {\bf I})^{-1}{\bf X}^T{\bf Y}
-$$
-
-**Q19:** 
 
 We start off by noting that $\text{E}(f(\bf{x}_0)) = \text{E}(Y_0 - \epsilon) = \text{E}(\bf{x}_0^T\beta)$, which enables us to write $(\bf{x}_0^T - x_0^T\hat{\beta})^2$ as $\text{E}(f(\bf{x}_0) - \hat{f}(\bf{x}_0))^2$. The expression for $\text{E}\left[(Y_0 - \hat{f}(x_0))^2\right]$ becomes
 
@@ -274,10 +264,57 @@ $$
 = \text{Var}(\epsilon) + \text{Var}(\hat{f}(\bf{x}_0)) + \left(\text{E}\left[f(\bf{x}_0) - \hat{f}(\bf{x}_0)\right]\right)^2
 $$
 
+
+
+Ridge estimator:
+$$
+\widetilde{\boldsymbol \beta}=({\bf X}^T{\bf X}+\lambda {\bf I})^{-1}{\bf X}^T{\bf Y}
+$$
+
+**Q19:**
+
+We start off by defining $G := X^TX$, and by rewriting $\hat{\beta}$ as $\hat{\beta} = G^{-1}X^TY$. Note that G is a symmetric matrix. We can now write $\tilde{\beta}$ as 
+
+$$
+\tilde{\beta} = (G - {\lambda}I)^{-1}X^TY = (G - {\lambda}I)^{-1}GG^{-1}X^TY = (G + {\lambda}I)^{-1}G\hat{\beta}
+$$
+$$
+= \left[G(I + {\lambda}G^{-1})\right]^{-1}G\hat{\beta} = (I + {\lambda}G^{-1})^{-1}G^{-1}G\hat{\beta} = (I + {\lambda}G^{-1})^{-1}\hat{\beta}
+$$
+By defining $H := (I + {\lambda}G^{-1})$, we end up with
+
+$$
+\tilde{\beta} = H^{-1}\hat{\beta}
+$$
+It follows from the previous results, as well as the properties introduced earlier that
+$$
+\text{E}(\tilde{\beta}) = H^{-1}\text{E}(\hat{\beta}) = H^{-1}\beta
+$$
+and
+
+$$
+\text{Cov}(\tilde{\beta}) = H^{-1}\text{Cov}(\hat{\beta})(H^{-1})^T = \sigma^2(HGH)^{-1}
+$$
+
 **Q20:** 
+
+$$
+\text{E}(\bf{x}_0^T\tilde{\beta}) = \bf{x}_0^TH^{-1}\beta
+$$
+$$
+\text{Var}(\bf{x}_0^T\tilde{\beta}) = \sigma^2\bf{x}_0^T(HGH)^{-1}\bf{x}_0
+$$
 
 **Q21:** 
 $$\text{E}[(Y_0-\widetilde{f}({\bf x}_0))^2]=[\text{E}(\widetilde{f}({\bf x}_0)-f({\bf x}_0)]^2+\text{Var}(\widetilde{f}({\bf x}_0) ) + \text{Var}(\varepsilon)$$
+Using that $\text{Var}(X) = \text{E}(X^2) - \text{E}(X)^2$, we obtain
+
+$$
+\text{E}[(Y_0-\tilde{f}(\bf{x}_0))^2] = \text{Var}(\bf{x}_0^T\beta + \epsilon + \bf{x}_0^T\tilde{\beta}) + \left[\text{E}(\bf{x}_0^T\beta + \epsilon - \bf{x}_0^T\hat{\beta})\right]^2
+$$
+$$
+\text{Var}(\epsilon) + \text{Var}(\tilde{f}(\bf{x_0})) + \left[\text{E}(f(\bf{x_0}) - \tilde{f}(\bf{x}_0^T) \right]^2
+$$
 
 
 ```{r}
@@ -296,13 +333,16 @@ Hint: we perform matrix multiplication using `%*%`, transpose of a matrix `A` wi
 
 **Q22:** 
 
-```{r,eval=FALSE}
+```{r,eval=TRUE}
 sqbias=function(lambda,X,x0,beta)
 {
   p=dim(X)[2]
-  value= #HERE YOU FILL IN
+  G <- t(X)%*%X
+  H <- (diag(p) + lambda*solve(G))
+  value <- (t(x0)%*%beta - t(x0)%*%solve(H)%*%beta)^2 
   return(value)
 }
+
 thislambda=seq(0,2,length=500)
 sqbiaslambda=rep(NA,length(thislambda))
 for (i in 1:length(thislambda)) sqbiaslambda[i]=sqbias(thislambda[i],X,x0,beta)
@@ -311,12 +351,14 @@ plot(thislambda,sqbiaslambda,col=2,type="l")
 
 **Q23:** 
 
-```{r,eval=FALSE}
+```{r,eval=TRUE}
 variance=function(lambda,X,x0,sigma)
 {
   p=dim(X)[2]
   inv=solve(t(X)%*%X+lambda*diag(p))
-  value=#HERE YOU FILL IN
+  G <- t(X)%*%X
+  H <- (diag(p) + lambda*solve(G))
+  value <- sigma^2*t(x0)%*%solve(H%*%G%*%H)%*%x0
   return(value)
 }
 thislambda=seq(0,2,length=500)
@@ -328,7 +370,7 @@ plot(thislambda,variancelambda,col=4,type="l")
 
 **Q24:** 
 
-```{r,eval=FALSE}
+```{r,eval=TRUE}
 tot=sqbiaslambda+variancelambda+sigma^2
 which.min(tot)
 thislambda[which.min(tot)]
@@ -337,6 +379,34 @@ lines(thislambda, sqbiaslambda,col=2)
 lines(thislambda, variancelambda,col=4)
 lines(thislambda,rep(sigma^2,500),col="orange")
 abline(v=thislambda[which.min(tot)],col=3)
+```
+An alternative approach to plotting and evaluating is presented below. This serves the same purpose as what is done above, and can be disregarded.
+
+```{r,eval=TRUE}
+library(tidyverse)
+lambdas <- seq(0, 2, length = 500)
+df <- tibble(lambda = lambdas,
+             sqbias = lambdas %>%
+               map_dbl(partial(sqbias, x0 = x0, beta = beta, X = X)),
+             variance = lambdas %>%
+               map_dbl(partial(variance, x0 = x0, sigma = sigma, X = X)))
+df <- df %>% mutate(tot = sqbias + variance + sigma^2)
+min <- df %>% filter(tot == min(tot)) %>% select(lambda, tot)
+df %>% ggplot(aes(x = lambda)) +
+  geom_line(aes(y = variance, color = 'Variance')) +
+  geom_line(aes(y = sqbias, color = 'Squared bias')) +
+  geom_line(aes(y = tot, color = 'Expected squared error')) +
+  geom_hline(aes(color = 'Irreducible error', yintercept = sigma^2)) + 
+  geom_vline(aes(xintercept = min %>% select(lambda) %>% as.numeric())) +
+  xlab(expression(lambda)) + 
+  ylab(NULL) + 
+  ggtitle('Components of expected squared error') +
+  theme(legend.title = element_blank())
+
+min %>% knitr::kable(caption = 'Optimal expected square error',
+              col.names = c('$\\lambda$', 'Expected squared error'),
+              escape=FALSE)
+
 ```
 
 
