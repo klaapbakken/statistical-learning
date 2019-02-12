@@ -1,7 +1,7 @@
 ---
 subtitle: "TMA4268 Statistical Learning V2019"
-title: "Compulsory exercise 1: Group XYZ"
-author: "NN1, NN2 and NN3"
+title: "Compulsory exercise 1: Group 13"
+author: "Øyvind Klåpbakken, Martin Outzen Berild and Sindre Henriksen"
 date: "`r format(Sys.time(), '%d %B, %Y')`"
 output: 
   html_document
@@ -443,7 +443,7 @@ $$
 \text{E}[(Y_0-\tilde{f}(\bf{x}_0))^2] = \text{Var}(\bf{x}_0^T\beta + \epsilon + \bf{x}_0^T\tilde{\beta}) + \left[\text{E}(\bf{x}_0^T\beta + \epsilon - \bf{x}_0^T\hat{\beta})\right]^2
 $$
 $$
-\text{Var}(\epsilon) + \text{Var}(\tilde{f}(\bf{x_0})) + \left[\text{E}(f(\bf{x_0}) - \tilde{f}(\bf{x}_0^T) \right]^2
+=\text{Var}(\epsilon) + \text{Var}(\tilde{f}(\bf{x_0})) + \left[\text{E}(f(\bf{x_0}) - \tilde{f}(\bf{x}_0^T) \right]^2
 $$
 
 
@@ -463,6 +463,8 @@ Hint: we perform matrix multiplication using `%*%`, transpose of a matrix `A` wi
 
 **Q22:** 
 
+The squared bias is zero for $\lambda = 0$ as one would expect from the results above. The fact that the error is approaching zero again around $\lambda = 0.5$ is more unexpected and. It then proceeds in an expected way by increasing as $lambda$ increases. 
+
 ```{r,eval=TRUE}
 sqbias=function(lambda,X,x0,beta)
 {
@@ -480,6 +482,8 @@ plot(thislambda,sqbiaslambda,col=2,type="l")
 ```
 
 **Q23:** 
+
+Having seen the previous plot, and by remembering that the expected squared prediction error is made of up of the sum of the variance and the squared bias we would expect to see that the variance drops as the squared bias increases. Therefore, the plot of the variance is not surprising.
 
 ```{r,eval=TRUE}
 variance=function(lambda,X,x0,sigma)
@@ -510,7 +514,7 @@ lines(thislambda, variancelambda,col=4)
 lines(thislambda,rep(sigma^2,500),col="orange")
 abline(v=thislambda[which.min(tot)],col=3)
 ```
-An alternative approach to plotting and evaluating is presented below. This serves the same purpose as what is done above, and can be disregarded.
+The optimal value for $\lambda$ is shown in the table below. An alternative approach to plotting and finding this optimal value is presented below. It serves the same purpose as what is done above.
 
 ```{r,eval=TRUE}
 library(tidyverse)
@@ -533,7 +537,7 @@ df %>% ggplot(aes(x = lambda)) +
   ggtitle('Components of expected squared error') +
   theme(legend.title = element_blank())
 
-min %>% knitr::kable(caption = 'Optimal expected square error',
+min %>% knitr::kable(caption = 'Optimal expected squared error',
               col.names = c('$\\lambda$', 'Expected squared error'),
               escape=FALSE)
 
