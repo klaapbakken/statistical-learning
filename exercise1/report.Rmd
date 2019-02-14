@@ -306,7 +306,7 @@ box()
 
 **Q14:** 
 The optimal choice is $K = 30$ from **Q13**. 
-```{r,eval=FALSE}
+```{r,eval=TRUE}
 K=30
   
 # knn with prob=TRUE outputs the probability of the winning class
@@ -320,7 +320,8 @@ library(pROC)
 # now you use predictor=KNNprob and response=M[-tr,1] 
 # in your call to the function roc in the pROC library
 myRoc <- roc(response = M[-tr,1], predictor = KNNprob, auc = TRUE, ci = TRUE)
-plot.roc(myRoc, print.auc = TRUE)
+ggroc(myRoc) + 
+  labs(caption = paste(c("AUC: ", signif(myRoc$auc, 3)), collapse = " "))
 ```
 
 **Q15:**
