@@ -206,6 +206,7 @@ relatively high lung capacity; possibly close to the sample maximum
 ```{r}
 library(class)# for function knn
 library(caret)# for confusion matrices
+library(ggplot2)
 
 raw = read.csv("https://www.math.ntnu.no/emner/TMA4268/2019v/data/tennis.csv")
 M = na.omit(data.frame(y=as.factor(raw$Result),
@@ -219,8 +220,14 @@ Mdf=data.frame(M,"istest"=as.factor(trte))
 ```
 
 **Q9:** 
-$\hat{y} = \hat{R}(Y = j|X = x_0) = \frac{1}{K}\sum\limits_{i\in\mathcal{N}_0}I(y_i = j)$
-
+The KNN estimator $\hat{y}\in{0,1}$ is determined by taking a "majority vote" of the N closest neighbours of $x$. 
+\begin{equation}
+\hat{y} = \hat{P}(Y = j|X = x_0) = \frac{1}{K}\sum\limits_{i\in\mathcal{N}_0}I(y_i = j) = 
+\begin{cases}
+\frac{1}{K}\sum\limits_{i\in N}y_i, \enspace j = 1\\
+1-\frac{1}{K}+\sum\limi0ts_{i\in N} y_i, \enspace j = 0
+\end{cases}
+\end{equation}
 **Q10:** 
 ```{r,eval=TRUE}
 ks = 1:30
@@ -267,6 +274,7 @@ cv = sapply(ks, function(k){
 cv.e = colMeans(cv)
 cv.se = apply(cv,2,sd)/sqrt(5)
 k.min = which.min(cv.e)
+cat("k.min = ", k.min)
 ```
 
 **Q12:** 
@@ -282,9 +290,10 @@ lines(ks, train.e, type="o", pch = 16, ylim = c(0.5, 0.7), col = co[3])
 lines(ks, test.e, type="o", pch = 16, ylim = c(0.5, 0.7), col = co[1])
 legend("topright", legend = c("Test", "5-fold CV", "Training"), lty = 1, col=co)
 ```
+The bias for $\hat{y}(x)$ will increase with increasing $K$. If $K$ is small there want be alot of bias, because the predictors are close to the point we are trying to estimate. The variance on the other hand will decrease with increasing K. If K is small the random noise will affect it the estimate more than if there were more points. You can also see this from the formula of variance. 
 
 **Q13:** 
-The strategy used in the first line is the \textit{one standard error rule}, which means that we choose the highest K for which $CV(\theta) \leq CV(\hat{\theta}) + SE(\hat{\theta})$, where $\hat{\theta}$ is k.min from **Q12**
+The strategy used in the first line is the \textit{one standard error rule}, which means that we choose the highest K for which or $K = \max\limits_K\{CV(K) \leq CV(\hat{K}) + SE(\hat{K})\}$, where $\hat{K}$ is k.min from Q11.
 ```{r,eval=FALSE}
 k = tail(which(cv.e < cv.e[k.min] + cv.se[k.min]), 1)
 size = 100
@@ -305,7 +314,7 @@ box()
 
 
 **Q14:** 
-The optimal choice is $K = 30$ from **Q13**. 
+The optimal choice is $K = 30$ from Q13. 
 ```{r,eval=TRUE}
 K=30
   
@@ -326,13 +335,22 @@ ggplot(NULL, aes(x =rev(myRoc$specificities), y =rev(myRoc$sensitivities)))+
   geom_segment(aes(x = 0, y = 1, xend = 1,yend = 0), linetype = "dashed", alpha = 0.5) + 
   geom_step() +
   scale_x_reverse(name = "Specificity",limits = c(1,0), breaks = breaks, expand = c(0.001,0.001)) + 
-  scale_y_continuous(name = "Sensitivity", limits = c(0,1), breaks = breaks, expand = c(0.001, 0.001)) +
-  theme_bw() + 
+  scale_y_continuous(name = "Sensitivity", limits = c(0,1), breaks = breaks, expand = c(0.001, 0.001)) + 
   theme(axis.ticks = element_line(color = "grey80")) +
   coord_equal() + 
-  annotate("text", x = interval/2, y = interval/2, vjust = 0, label = paste("AUC =",sprintf("%.3f",myRoc$auc)))
+  annotate("text", x = interval/2, y = interval/2, vjust = 0, label = paste("AUC =",sprintf("%.3f",myRoc$auc)))+
+  ggtitle("ROC 30-nearest neighbors")
 ```
+The ROC curve displays the relationship between the percentage of correctly predicted *negatives*, *specificity*, and the percentage of correcly predicted *positives*, *sensitivity*. Their respective equations are
+$$
+\textrm{specificity} =  \frac{\textrm{#true negatives}}{\textrm{#negatives}} = \frac{TN}{N} \in \ {0,1\},
+$$
+$$
+\textrm{sensitivity} =  \frac{\textrm{#true positives}}{\textrm{#positives}} = \frac{TP}{P} \in \ {0,1\}.
+$$
+The $x$-axis being the specificity is flipped so that specificity $= 1$ is to the left in the ROC. The best scenario is if we don't have any missclassifications, then the ROC curve would be in the top left corner, and the *"area under the curve"*(AUC) would be 1. We had AUC $=$ `r myRoc$auc`.
 
+Random guessing is the same as drawing samples $u$ from a uniform distribution $\mathcal{U}[0,1]$.
 **Q15:**
 #The argument which creates the lowest cv error
 ```{r,eval=TRUE}
