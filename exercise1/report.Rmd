@@ -350,18 +350,33 @@ $$
 $$
 The $x$-axis being the specificity is flipped so that specificity $= 1$ is to the left in the ROC. The best scenario is if we don't have any missclassifications, then the ROC curve would be in the top left corner, and the *"area under the curve"*(AUC) would be 1. We had AUC $=$ `r myRoc$auc`.
 
-Random guessing is the same as drawing samples $u$ from a uniform distribution $\mathcal{U}[0,1]$.
+The diagonal line in the figure is $specificity = sensitivity$ and it represent a predictor of random guessing. It would be the same as sampling from a $u\sim \mathcal{U}[0,1]$. If we draw a positive class 50% of the samples, it is expected to draw negatives 50% aswell, and we would have $\textrm{sensitivity = 0.5} and \textrm{specificity = 0.5}. If we instead draw 30% the positive class, it would be expected to draw the negative class 30% of the time, leading to the ROC point (0.3, 0.3). Doing this over and over, would give us the *random guess line*.
 **Q15:**
-#The argument which creates the lowest cv error
 ```{r,eval=TRUE}
   quality_score <- data.frame(Mdf, y_hat = as.integer(M$x1>M$x2))
-
-  ggplot(quality_score)+
-    geom_point(aes(x = x1, y= x2, color = y,shape=istest))+
-    #geom_area(aes(c(-100,20),c(-100,20)),alpha=0.1,fill="pink3")+
-    geom_abline(aes(slope=1,intercept=0))
+  whoWins <- data.frame(
+    x1=c(-100,20,20,-100,20,-100),
+    x2=c(-100,-100,20,-100,20,20),
+    win=c(1,1,1,2,2,2)
+  )
+ggplot(quality_score)+
+    geom_polygon(data = whoWins, aes(x=x1,y=x2,group=win,fill=factor(win)),alpha=0.2)+
+    scale_fill_manual(name = "Decision",labels=c("Player 2 wins","Player 1 wins",""),values = c("lightblue","lightsalmon","gray"))+
+    geom_point(aes(x = x1, y= x2, col = y,shape=istest),size =1)+
+    scale_shape_manual(name ="", label=c("train","test"),values=c(3,16))+
+    guides(color=FALSE)+
+    geom_abline(aes(slope=1,intercept=0,linetype = "Decision boundary"))+
+    xlab(expression("x"[1])) +
+    ylab(expression("x"[2])) +
+    scale_x_continuous(limits = c(-100, 20), expand = c(0, 0)) +
+    scale_y_continuous(limits = c(-100, 20), expand = c(0, 0)) +
+    scale_linetype_manual(name="Argmax estimator",labels="Decision Boundary",values="dashed")
 ```
+```{r, eval=TRUE}
+confusionMatrix(table(quality_score$y_hat[-tr],quality_score$y[-tr]))
+confusionMatrix(table(KNNclass,quality_score$y[-tr]))
 
+  ```
 
 # Problem 3: Bias-variance trade-off 
 
