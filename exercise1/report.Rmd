@@ -133,7 +133,7 @@ ggplot(modelB, aes(sample = .stdresid)) +
 library(nortest) 
 ad.test(rstudent(modelB))
 ```
-The model with `FEV` as response instead of `log(FEV)` is fitted an testet in
+The model with `FEV` as response instead of `log(FEV)` is fitted and tested in
 the code above. We see that the proportion of variability explained is somewhat
 smaller than before (77.54%) (we don't need to look at adjusted R-squared since 
 the number of covariates in the models are the same). Also, the standardized
@@ -301,7 +301,7 @@ legend("topright", legend = c("Test", "5-fold CV", "Training"), lty = 1, col=co)
 ```
 
 
-The bias for $\hat{y}(x)$ will increase with increasing $K$. If $K$ is small there want be alot of bias, because the predictors are close to the point we are trying to estimate. The variance on the other hand will decrease with increasing K. If K is small the random noise will affect it the estimate more than if there were more points. You can also see this from the formula of variance. 
+The bias for $\hat{y}(x)$ will increase with increasing $K$. If $K$ is small there wont be alot of bias, because the predictors are close to the point we are trying to estimate. The variance on the other hand will decrease with increasing K. If K is small the random noise will affect it the estimate more than if there were more points. You can also see this from the formula of variance. 
 
 **Q13:** 
 The strategy used in the first line is the \textit{one standard error rule}, which means that we choose the highest K for which or $$K = \max\limits_K\{CV(K) \leq CV(\hat{K}) + SE(\hat{K})\},$$ where $\hat{K}$ is the k.min from Q11.
@@ -351,10 +351,10 @@ ggplot(NULL, aes(x =rev(myRoc$specificities), y =rev(myRoc$sensitivities)))+
 
 The ROC curve displays the relationship between the percentage of correctly predicted negatives of true negatives, *specificity*, and the percentage of correcly predicted positives of true positives, *sensitivity*. Their respective equations are
 $$
-\textrm{specificity} =  \frac{\textrm{true negatives}}{\textrm{negatives}} = \frac{TN}{N},
+\textrm{specificity} =  \frac{\#\textrm{true negatives}}{\#\textrm{negatives}} = \frac{TN}{N},
 $$
 $$
-\textrm{sensitivity} =  \frac{\textrm{true positives}}{\textrm{positives}} = \frac{TP}{P}.
+\textrm{sensitivity} =  \frac{\#\textrm{true positives}}{\#\textrm{positives}} = \frac{TP}{P}.
 $$
 The $x$-axis being the specificity is flipped so that $\textrm{specificity} = 1$ is to the left in the ROC. The best scenario is if we don't have any missclassifications, then the ROC curve would be in the top left corner, and the *"area under the curve"*(AUC) would be 1. We had $\textrm{AUC} =$ `r myRoc$auc`.
 
