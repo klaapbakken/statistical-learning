@@ -1,9 +1,9 @@
 ---
 subtitle: "TMA4268 Statistical Learning V2019"
 title: "Compulsory exercise 1: Group 13"
-author: "Øyvind Klåpbakken, Martin Outzen Berild and Sindre Henriksen"
-date: "`r format(Sys.time(), '%d %B, %Y')`"
-output: html_document
+author: "Ã˜yvind KlÃ¥pbakken, Martin Outzen Berild and Sindre Henriksen"
+date: "February 22nd 2019"
+output: pdf_document
   
 ---
   
@@ -305,7 +305,7 @@ The bias for $\hat{y}(x)$ will increase with increasing $K$. If $K$ is small the
 
 **Q13:** 
 The strategy used in the first line is the \textit{one standard error rule}, which means that we choose the highest K for which or $$K = \max\limits_K\{CV(K) \leq CV(\hat{K}) + SE(\hat{K})\},$$ where $\hat{K}$ is the k.min from Q11.
-```{r,eval=FALSE}
+```{r,eval=TRUE}
 k = tail(which(cv.e < cv.e[k.min] + cv.se[k.min]), 1)
 size = 100
 xnew = apply(M[tr,-1], 2, function(X) seq(min(X), max(X), length.out=size))
@@ -351,10 +351,10 @@ ggplot(NULL, aes(x =rev(myRoc$specificities), y =rev(myRoc$sensitivities)))+
 
 The ROC curve displays the relationship between the percentage of correctly predicted negatives of true negatives, *specificity*, and the percentage of correcly predicted positives of true positives, *sensitivity*. Their respective equations are
 $$
-\textrm{specificity} =  \frac{\textrm{#true negatives}}{\textrm{#negatives}} = \frac{TN}{N},
+\textrm{specificity} =  \frac{\textrm{true negatives}}{\textrm{negatives}} = \frac{TN}{N},
 $$
 $$
-\textrm{sensitivity} =  \frac{\textrm{#true positives}}{\textrm{#positives}} = \frac{TP}{P}.
+\textrm{sensitivity} =  \frac{\textrm{true positives}}{\textrm{positives}} = \frac{TP}{P}.
 $$
 The $x$-axis being the specificity is flipped so that $\textrm{specificity} = 1$ is to the left in the ROC. The best scenario is if we don't have any missclassifications, then the ROC curve would be in the top left corner, and the *"area under the curve"*(AUC) would be 1. We had $\textrm{AUC} =$ `r myRoc$auc`.
 
@@ -444,6 +444,8 @@ $$
 \text{E}\left[(Y_0 - \hat{f}(x_0))^2\right] =
 \text{Var}(Y_0 - \hat{f}(x_0)) + \text{E}(Y_0 - \hat{f}(\bf{x}_0))^2 \\
 = \text{Var}(\bf{x}_0^T\beta + \epsilon - \bf{x}_0^T\hat{\beta}) \\ + \left(\text{E}\left[\bf{x}_0^T\beta + \epsilon - \bf{x}_0^T\hat{\beta}\right]\right)^2 \\
+$$
+$$
 = \text{Var}(\epsilon) + \text{Var}(\hat{f}(\bf{x}_0)) + \left(\text{E}\left[f(\bf{x}_0) - \hat{f}(\bf{x}_0)\right]\right)^2
 $$
 
@@ -569,8 +571,11 @@ abline(v=thislambda[which.min(tot)],col=3)
 ```
 The optimal value for $\lambda$ is shown below. An alternative approach to plotting and finding this optimal value is also presented below. It serves the same purpose as what is done above.
 
-```{r,eval=TRUE}
+```{r,eval=TRUE, message=FALSE, warning=FALSE}
 library(tidyverse)
+```
+
+```{r, eval=TRUE}
 lambdas <- seq(0, 2, length = 500)
 df <- tibble(lambda = lambdas,
              sqbias = lambdas %>%
@@ -593,7 +598,6 @@ df %>% ggplot(aes(x = lambda)) +
 min %>% knitr::kable(caption = 'Optimal expected squared error',
               col.names = c('$\\lambda$', 'Expected squared error'),
               escape=FALSE)
-
 ```
 
 
