@@ -3,9 +3,8 @@ subtitle: "TMA4268 Statistical Learning V2019"
 title: "Compulsory exercise 1: Group 13"
 author: "Øyvind Klåpbakken, Martin Outzen Berild and Sindre Henriksen"
 date: "`r format(Sys.time(), '%d %B, %Y')`"
-output: 
-  html_document
-  #pdf_document
+output: html_document
+  
 ---
   
 ```{r setup, include=FALSE}
@@ -205,6 +204,7 @@ relatively high lung capacity; possibly close to the sample maximum
 
 ```{r}
 library(class)# for function knn
+library(lattice)
 library(caret)# for confusion matrices
 library(ggplot2)
 
@@ -225,10 +225,12 @@ The KNN estimator $\hat{y}\in{0,1}$ is determined by taking a "majority vote" of
 \hat{y} = \hat{P}(Y = j|X = x_0) = \frac{1}{K}\sum\limits_{i\in\mathcal{N}_0}I(y_i = j) = 
 \begin{cases}
 \frac{1}{K}\sum\limits_{i\in N}y_i, \enspace j = 1\\
-1-\frac{1}{K}+\sum\limi0ts_{i\in N} y_i, \enspace j = 0
+1-\frac{1}{K}+\sum\limits_{i\in N} y_i, \enspace j = 0
 \end{cases}
 \end{equation}
+
 **Q10:** 
+Finding the the test and training error of the data set
 ```{r,eval=TRUE}
 ks = 1:30
 train.var = Mdf[Mdf$istest == 0, 2:3]
@@ -243,10 +245,16 @@ for (k in ks){
   train.e[k] = mean(train.def != model2)
   test.e[k] = mean(test.def != model1)
 }
-train.e
-test.e
+ggplot(data.frame(K=1:30,train.e,test.e),aes(x=K)) + 
+  geom_line(aes(y = train.e, col = "Train error"),size = 1) + 
+  geom_line(aes(y = test.e, col = "Test error"),size = 1) + 
+  ylab("")+
+  theme(legend.title = element_blank())
+  
 ```
 
+
+In the Figure above the training error and test error is displayed. 
 
 ```{r, eval=TRUE}
 set.seed(0)
@@ -269,6 +277,7 @@ cv = sapply(ks, function(k){
 
 
 **Q11:** 
+Calculating the average CV error, the standard error of the average CV error over the 5 folds and the $K$ corresponding to the smallest CV error.
 
 ```{r, eval=TRUE}
 cv.e = colMeans(cv)
@@ -290,10 +299,12 @@ lines(ks, train.e, type="o", pch = 16, ylim = c(0.5, 0.7), col = co[3])
 lines(ks, test.e, type="o", pch = 16, ylim = c(0.5, 0.7), col = co[1])
 legend("topright", legend = c("Test", "5-fold CV", "Training"), lty = 1, col=co)
 ```
+
+
 The bias for $\hat{y}(x)$ will increase with increasing $K$. If $K$ is small there want be alot of bias, because the predictors are close to the point we are trying to estimate. The variance on the other hand will decrease with increasing K. If K is small the random noise will affect it the estimate more than if there were more points. You can also see this from the formula of variance. 
 
 **Q13:** 
-The strategy used in the first line is the \textit{one standard error rule}, which means that we choose the highest K for which or $K = \max\limits_K\{CV(K) \leq CV(\hat{K}) + SE(\hat{K})\}$, where $\hat{K}$ is k.min from Q11.
+The strategy used in the first line is the \textit{one standard error rule}, which means that we choose the highest K for which or $$K = \max\limits_K\{CV(K) \leq CV(\hat{K}) + SE(\hat{K})\},$$ where $\hat{K}$ is the k.min from Q11.
 ```{r,eval=FALSE}
 k = tail(which(cv.e < cv.e[k.min] + cv.se[k.min]), 1)
 size = 100
@@ -315,19 +326,14 @@ box()
 
 **Q14:** 
 The optimal choice is $K = 30$ from Q13. 
-```{r,eval=TRUE}
-K=30
+```{r,eval = TRUE,message=FALSE}
+K=tail(which(cv.e < cv.e[k.min] + cv.se[k.min]), 1)
   
-# knn with prob=TRUE outputs the probability of the winning class
-# therefore we have to do an extra step to get the probability of player 1 winning
 KNNclass=class::knn(train=M[tr,-1], cl=M[tr,1], test=M[-tr,-1], k = K,prob=TRUE)
 KNNprobwinning=attributes(KNNclass)$prob
 KNNprob= ifelse(KNNclass == "0", 1-KNNprobwinning, KNNprobwinning)
-# now KNNprob has probability that player 1 wins, for all matches in the test set
 
 library(pROC)
-# now you use predictor=KNNprob and response=M[-tr,1] 
-# in your call to the function roc in the pROC library
 myRoc <- roc(response = M[-tr,1], predictor = KNNprob, auc = TRUE, ci = TRUE)
 interval = 0.25
 breaks = seq(0,1,interval)
@@ -341,22 +347,24 @@ ggplot(NULL, aes(x =rev(myRoc$specificities), y =rev(myRoc$sensitivities)))+
   annotate("text", x = interval/2, y = interval/2, vjust = 0, label = paste("AUC =",sprintf("%.3f",myRoc$auc)))+
   ggtitle("ROC 30-nearest neighbors")
 ```
-The ROC curve displays the relationship between the percentage of correctly predicted *negatives*, *specificity*, and the percentage of correcly predicted *positives*, *sensitivity*. Their respective equations are
+
+
+The ROC curve displays the relationship between the percentage of correctly predicted negatives of true negatives, *specificity*, and the percentage of correcly predicted positives of true positives, *sensitivity*. Their respective equations are
 $$
 \textrm{specificity} =  \frac{\textrm{#true negatives}}{\textrm{#negatives}} = \frac{TN}{N},
 $$
 $$
 \textrm{sensitivity} =  \frac{\textrm{#true positives}}{\textrm{#positives}} = \frac{TP}{P}.
 $$
-The $x$-axis being the specificity is flipped so that specificity $= 1$ is to the left in the ROC. The best scenario is if we don't have any missclassifications, then the ROC curve would be in the top left corner, and the *"area under the curve"*(AUC) would be 1. We had AUC $=$ `r myRoc$auc`.
+The $x$-axis being the specificity is flipped so that $\textrm{specificity} = 1$ is to the left in the ROC. The best scenario is if we don't have any missclassifications, then the ROC curve would be in the top left corner, and the *"area under the curve"*(AUC) would be 1. We had $\textrm{AUC} =$ `r myRoc$auc`.
 
-The diagonal line in the figure is $specificity = sensitivity$ and it represent a predictor of random guessing. It would be the same as sampling from a $u\sim \mathcal{U}[0,1]$. If we draw a positive class 50% of the samples, it is expected to draw negatives 50% aswell, and we would have $\textrm{sensitivity = 0.5} and \textrm{specificity = 0.5}. If we instead draw 30% the positive class, it would be expected to draw the negative class 30% of the time, leading to the ROC point (0.3, 0.3). Doing this over and over, would give us the *random guess line*.
 
+If we have a predictor that classify a fraction $p$ as positive, then $p$ percent of the predictions would be true positives. The same predictor would classify a fraction $p$ as negative, the $p$ percent of the predictions would be true negative. Therefore true positive rate is equal to true negative rate, and we have a line from (1,0) to (0,1) as the ROC curve. This would yield a $\textrm{AUC} = 0.5$.
 
 **Q15:**
 
-
-```{r,eval=TRUE}
+Now we use a different predictor, $\tilde{y} = \textrm{argmax}_k (x_k)$
+```{r,eval=TRUE,warning=FALSE}
   quality_score <- data.frame(Mdf, y_hat = as.integer(M$x1>M$x2))
   whoWins <- data.frame(
     x1=c(-100,20,20,-100,20,-100),
@@ -377,10 +385,17 @@ ggplot(quality_score)+
     scale_linetype_manual(name="Argmax estimator",labels="Decision Boundary",values="dashed")
 ```
 ```{r, eval=TRUE}
-confusionMatrix(table(quality_score$y_hat[-tr],quality_score$y[-tr]))
-confusionMatrix(table(KNNclass,quality_score$y[-tr]))
+print("Argmax predictor")
+cM_argmax <- confusionMatrix(table(quality_score$y_hat[-tr],quality_score$y[-tr]))
+cM_argmax
+print("KNN predictor")
+cM_KNN <- confusionMatrix(table(KNNclass,quality_score$y[-tr]))
+cM_KNN
+```
 
-  ```
+
+From from the confusion matrices we see that specificity is better for the KNN predictor, but the sensitivity is better for the argmax predictor. From the misclassficiation error for KNN, `r  1- cM_KNN$overall[1]`, and the argmax, `r  1- cM_argmax$overall[1]`, We see that the argmax predictor is the best one. 
+
 
 # Problem 3: Bias-variance trade-off 
 
