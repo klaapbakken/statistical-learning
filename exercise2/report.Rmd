@@ -141,6 +141,40 @@ ctest=flying$ctest
 
 **Q28:** Start by getting to know the _training data_, by producing summaries and plots. Write a few sentences about what you observe and include your top 3 informative plots and/or outputs.
 
+We start off by making sure that the data is represented correctly, check for missing values and a summary of the numeric data. 
+
+```{r}
+library(dplyr)
+library(tibble)
+library(magrittr)
+library(forcats)
+library(purrr)
+library(ggplot2)
+library(tidyr)
+
+train_df <- ctrain %>%
+  as_tibble() %>%
+  mutate(diabetes = as_factor(diabetes))
+
+train_df %>%
+  GGally::ggcorr()
+
+train_df %>%
+  gather("variable", "value", c(-diabetes)) %>%
+  ggplot(aes(y=value, x=variable)) +
+  geom_boxplot() + 
+  facet_wrap(~diabetes)
+
+train_df %>%
+  gather("variable", "value", c(-diabetes, -bmi)) %>%
+  ggplot(aes(x=bmi, y=value)) + 
+  geom_point() +
+  geom_smooth(method="lm") +
+  facet_wrap(~variable)
+```
+
+
+
 **Q29:** Use different methods to analyse the data. In particular use 
 
 * one method from Module 4: Classification
@@ -154,5 +188,191 @@ For each method you
 * explain how any tuning parameters are chosen or model selection is performed
 * report (any) insight into the interpretation of the fitted model
 * evaluate the model using the test data, and report misclassifiation rate (cut-off 0.5 on probability) and plot ROC-curves and give the AUC (for method where class probabilities are given).
+
+```{r}
+library(parsnip)
+library(rsample)
+library(recipes)
+library(yardstick)
+
+rec <- train_df %>%
+  recipe() %>%
+  update_role(diabetes, new_role="outcome") %>%
+  update_role(-diabetes, new_role = "predictor")
+
+prepped <- rec %>%
+  prep(retain=TRUE)
+
+train <- prepped %>%
+  juice()
+
+log_reg <- logistic_reg(formula,
+                        mode = "classification",
+                        penalty = 0)
+
+log_reg_fit <- log_reg %>%
+  set_engine("glm") %>%
+  fit(formula = formula(prepped), data=train)
+
+log_reg_fit
+
+test_df <- ctest %>%
+  as_tibble() %>%
+  mutate(diabetes = as_factor(diabetes))
+
+test <- prepped %>%
+  bake(test_df)
+
+class_pred <- tibble(estimate = log_reg_fit %>%
+                       predict(test, type="class") %>%
+                       pull(),
+               truth = test %>%
+                 pull(diabetes))
+
+accuracy(class_pred, estimate, truth) %>%
+  select(.metric, .estimate) %>%
+  knitr::kable(col.names = c("Metric", "Estimate"))
+
+class_prob_pred <- tibble(estimate = log_reg_fit %>%
+                            predict(test, type="prob") %>%
+                            pull(.pred_1),
+                          truth = test %>%
+                            pull(diabetes))
+
+
+roc_curve(class_prob_pred, truth, estimate) %>%
+  autoplot()
+
+roc_auc(class_prob_pred, truth, estimate) %>%
+  select(.metric, .estimate) %>%
+  knitr::kable(col.names = c("Metric", "Estimate"))
+```
+```{r}
+folds <- train_df %>%
+  vfold_cv(v=5) %>% 
+  mutate(recipe = splits %>%
+           map(prepper, recipe = rec),
+         train = splits %>%
+           map(analysis),
+         test = splits %>%
+           map(assessment)
+         )
+
+n_predictors <- rec$var_info %>%
+  filter(role == "predictor") %>%
+  nrow()
+
+mtry_list <- seq(1, n_predictors)
+ntrees_list <- seq(1, 20, 1)
+min_n_list <- seq(1, 10, 1)
+
+parameter_df <- cross_df(list(mtry = mtry_list,
+                          trees = ntrees_list,
+                          min_n = min_n_list))
+
+model_list <- parameter_df %>%
+  as.list() %>%
+  pmap(
+    function(
+      mtry,
+      trees,
+      min_n)
+    rand_forest(mode = "classification",
+    mtry=mtry,
+    trees=trees,
+    min_n=min_n)
+  )
+
+get_prediction_df <- function(model, folds, engine){
+  prediction_df <- folds %>%
+    mutate(fitted_model =
+             map2(
+               recipe,
+               train,
+               ~ model %>% 
+                 set_engine(engine) %>%
+                 fit(
+                 formula(.x),
+                 data = bake(
+                   object = .x,
+                   new_data = .y),
+               )
+             ),
+           prediction =
+               pmap(
+                 lst(
+                   recipe,
+                   test,
+                   fitted_model),
+                 function(recipe, test, fitted_model)
+                   fitted_model %>%
+                   predict(new_data = bake(
+                            object = recipe,
+                            new_data = test),
+                           type="class"
+                   )
+                 )
+               )
+  return(prediction_df)
+}
+
+cv_list <- model_list %>% map(get_prediction_df,
+                              folds=folds,
+                              engine="randomForest")
+
+get_accuracy <- function(cv_df){
+accuracy_df <- tibble(truth =
+                        cv_df %>%
+                        select(prediction) %>%
+                        unnest() %>%
+                        pull(.pred_class),
+                      estimate =
+                        cv_df %>%
+                        select(test) %>%
+                        unnest() %>%
+                        pull(diabetes))
+return(accuracy(accuracy_df, truth, estimate))
+}
+
+accuracy_list <- cv_list %>% map(get_accuracy) %>% map(".estimate")
+
+parameter_df <- parameter_df %>% mutate(accuracy = accuracy_list) %>% unnest()
+
+parameter_df %>% filter(accuracy == max(accuracy))
+```
+
+
+```{r}
+
+cost_list <- map(seq(2, -3, -1),  ~10^(.))
+rbf_sigma_list <- map(seq(0, -4, -1),  ~10^(.))
+parameter_df <- cross_df(list(cost = cost_list,
+                          rbf_sigma = rbf_sigma_list))
+
+model_list <- parameter_df %>%
+  as.list() %>%
+  pmap(
+    function(
+      cost,
+      rbf_sigma)
+    svm_rbf(mode = "classification",
+    cost=cost,
+    rbf_sigma=rbf_sigma)
+  )
+
+cv_list <- model_list %>% map(get_prediction_df,
+                              folds=folds,
+                              engine="kernlab")
+
+accuracy_list <- cv_list %>% map(get_accuracy) %>% map(".estimate")
+
+parameter_df <- parameter_df %>% mutate(accuracy = accuracy_list) %>% unnest()
+
+parameter_df %>% filter(accuracy == max(accuracy))
+
+
+```
+
+
 
 **Q30:** Conclude with choosing a winning method, and explain why you mean that this is the winning method.
