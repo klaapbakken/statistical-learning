@@ -15,11 +15,11 @@ install.packages("e1071") # for support vector machines
 install.packages("nnet") # for feed forward neural networks
 
 install.packages("tidyverse")
+install.packages("tidymodels")
 install.packages("corrplot")
 install.packages("ggridges")
 install.packages("GGally")
-install.packages("mlr")
-install.packages("tidymodels")
 install.packages("devtools")
 
 devtools::install_github("tidymodels/parsnip")
+
