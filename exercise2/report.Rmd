@@ -141,7 +141,7 @@ ctest=flying$ctest
 
 **Q28:** Start by getting to know the _training data_, by producing summaries and plots. Write a few sentences about what you observe and include your top 3 informative plots and/or outputs.
 
-We start off by making sure that the data is represented correctly, check for missing values and a summary of the numeric data. 
+# Exploratory data analysis
 
 ```{r}
 library(dplyr)
@@ -188,6 +188,8 @@ For each method you
 * explain how any tuning parameters are chosen or model selection is performed
 * report (any) insight into the interpretation of the fitted model
 * evaluate the model using the test data, and report misclassifiation rate (cut-off 0.5 on probability) and plot ROC-curves and give the AUC (for method where class probabilities are given).
+
+#Logistic regression
 
 ```{r}
 library(parsnip)
@@ -247,6 +249,9 @@ roc_auc(class_prob_pred, truth, estimate) %>%
   select(.metric, .estimate) %>%
   knitr::kable(col.names = c("Metric", "Estimate"))
 ```
+
+#Random forest
+
 ```{r}
 folds <- train_df %>%
   vfold_cv(v=5) %>% 
@@ -340,17 +345,51 @@ validation_score <- function(cv_df){
 rf_param_df <- rf_param_df %>% mutate(accuracy = cv_list %>%
                                           map_dbl(validation_score))
 
-best_accuracy <- rf_param_df %>% filter(accuracy == max(accuracy)) %>% select(accuracy)
+best_accuracy <- rf_param_df %>%
+  filter(accuracy == max(accuracy)) %>%
+  select(accuracy)
 
 best_params <- rf_param_df %>%
   mutate(index = row_number()) %>%
   filter(accuracy == max(accuracy)) %>%
-  select(mtry, trees, min_n) %>%
-  head(1) %>%
-  as.list()
-   
+  select(mtry, trees, min_n)
+
+best_params
+
+rf_estimator <- rand_forest(mode = "classification",
+                            mtry = 2,
+                            trees = 9,
+                            min_n = 5) %>%
+  set_engine("randomForest") %>%
+  fit(formula = formula(prepped),
+      data=train)
+
+results <- tibble(
+  estimated_class = rf_estimator %>%
+    predict(new_data=test,
+            type="class") %>%
+    pull(.pred_class),
+  estimated_class_probs = rf_estimator %>%
+    predict(new_data=test,
+            type="prob") %>%
+    pull(.pred_1),
+  truth = test %>%
+    pull(diabetes))
+
+accuracy(results, truth, estimated_class)
+
+roc_auc(results, truth, estimated_class_probs)
+
+roc_curve(results, truth, estimated_class_probs) %>% 
+  autoplot()
+
+conf_mat(results, truth, estimated_class) %>%
+  autoplot("heatmap")
+
+
 ```
 
+#Support vector machine
 
 ```{r, eval=FALSE}
 
@@ -392,48 +431,7 @@ best_params <- svm_param_df %>%
   as.list()
 ```
 
-```{r}
-
-dt_param_df <- cross_df(
-  list(
-     cost_complexity = map(seq(-2, -5, -1),  ~10^(.)),
-    tree_depth = seq(1, 1, 20),
-    min_n = seq(1, 10, 1)
-  )
-)
-
-model_list <- dt_param_df %>%
-  as.list() %>%
-  pmap(
-    function(
-      cost_complexity,
-      tree_depth,
-      min_n)
-    decision_tree(mode = "classification",
-    cost_complexity=cost_complexity,
-    tree_depth=tree_depth,
-    min_n=min_n) %>%
-      set_engine("rpart")
-  )
-
-cv_list <- model_list %>% map(predict_on_folds,
-                              folds=folds)
-
-dt_param_df <- dt_param_df %>%
-  mutate(accuracy = cv_list %>%
-           map_dbl(validation_score))
-
-dt_param_df %>% filter(accuracy == max(accuracy))
-
-best_accuracy <- dt_param_df %>% filter(accuracy == max(accuracy)) %>% select(accuracy)
-
-best_params <- dt_param_df %>%
-  mutate(index = row_number()) %>%
-  filter(accuracy == max(accuracy)) %>%
-  select(cost_complexity, tree_depth, min_n) %>%
-  head(10) %>%
-  as.list()
-```
+#Neural network
 
 ```{r, eval=FALSE}
 library(keras)
@@ -442,8 +440,12 @@ keras::use_condaenv("base")
 
 input_tensor <- layer_input(shape=ncol(train %>% select(c(-diabetes))))
 output_tensor <- input_tensor %>%
-  layer_dense(units = 4, activation="relu") %>%
-  layer_dense(units = 2, activation ="relu") %>%
+  layer_dense(units = 32, activation="relu") %>%
+  layer_batch_normalization() %>%
+  layer_dense(units = 8, activation="relu") %>% 
+  layer_batch_normalization() %>% 
+  layer_dense(units = 8, activation="relu") %>% 
+  layer_batch_normalization() %>% 
   layer_dense(units = 1, activation="sigmoid")
 
 model <- keras_model(input_tensor, output_tensor)
@@ -454,7 +456,7 @@ model %>% compile("Adam", loss="binary_crossentropy", metrics = c("accuracy"))
 
 model %>% fit(train %>% select(-diabetes) %>% as.matrix(),
               train %>% select(diabetes) %>% as.matrix(),
-              batch_size=16, epochs=30)
+              batch_size=8, epochs=15)
 
 model %>% evaluate(test %>% select(-diabetes) %>% as.matrix(),
                   test %>% select(diabetes) %>% as.matrix())
