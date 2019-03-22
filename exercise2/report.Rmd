@@ -143,7 +143,9 @@ ctest=flying$ctest
 
 # Exploratory data analysis
 
-```{r}
+We start off by looking at the correlation matrix, seeing as this can provide insight into the correlation between the different covariates.  High correlation might indicate that two covariates encode similar information and that it might be beneficial to drop one of the covariates in order to reduce the complexity and variance. From the figure below it's clear that $\textrm{skin}$ and $\textrm{bmi}$ is very highly correlated, as well as $\textrm{age}$ and $\textrm{npreg}$.
+
+```{r, fig.cap="Correlation matrix"}
 library(dplyr)
 library(tibble)
 library(magrittr)
@@ -158,20 +160,25 @@ train_df <- ctrain %>%
 
 train_df %>%
   GGally::ggcorr()
+```
+We proceed by splitting the dataset into two parts, one where $\textrm{diabetes} = 1$ and another one where $\textrm{diabetes} = 0$. By creating boxplots for each of these cases we can observe if there's any observable difference between the mean and variance of the covariates when the data is grouped by the value of $\textrm{diabetes}$. We immediately observe that the mean $\textrm{glu}$ is considerably higher for the group where $\textrm{diabetes} = 1$. The differences are not as clear for the other covariates, but it's worth noting that the mean value of $\textrm{skin}$ and $\textrm{bp}$ also seem to higher for the group with $\textrm{diabetes} = 1$.
+
+```{r, fig.cap=c("Boxplot for dataset grouped by $\textrm{diabetes}$", )}
 
 train_df %>%
   gather("variable", "value", c(-diabetes)) %>%
   ggplot(aes(y=value, x=variable)) +
   geom_boxplot() + 
   facet_wrap(~diabetes)
-
-train_df %>%
-  gather("variable", "value", c(-diabetes, -bmi)) %>%
-  ggplot(aes(x=bmi, y=value)) + 
-  geom_point() +
-  geom_smooth(method="lm") +
-  facet_wrap(~variable)
 ```
+The next plot provides further insight into the importance of $\textrm{glu}$ and $\textrm{skin}$. There's a clear structure in the plot below, showing that the fraction of people with diabetes increases drastically as the values of $\textrm{skin}$ and $\textrm{glu}$ increase.
+
+```{r}
+train_df %>%
+  ggplot(aes(x=glu, y=skin, color=diabetes)) +
+  geom_jitter()
+```
+
 
 
 
@@ -189,103 +196,16 @@ For each method you
 * report (any) insight into the interpretation of the fitted model
 * evaluate the model using the test data, and report misclassifiation rate (cut-off 0.5 on probability) and plot ROC-curves and give the AUC (for method where class probabilities are given).
 
-#Logistic regression
+We start off by defining a number of functions that simplify tuning through the use of cross - validation. 
 
 ```{r}
-library(parsnip)
-library(rsample)
-library(recipes)
-library(yardstick)
+#Input: A parsnip model, from the package parsnip, and a data frame where
+#each row corresponds to a CV - iteration, i.e. a specific validation set.
+#The folds dataframe is a modified version of the dataframe returned by
+#vfold_cv from the rsample - package.
 
-rec <- train_df %>%
-  recipe() %>%
-  update_role(diabetes, new_role="outcome") %>%
-  update_role(-diabetes, new_role = "predictor")
-
-prepped <- rec %>%
-  prep(retain=TRUE)
-
-train <- prepped %>%
-  juice()
-
-log_reg <- logistic_reg(formula,
-                        mode = "classification",
-                        penalty = 0)
-
-log_reg_fit <- log_reg %>%
-  set_engine("glm") %>%
-  fit(formula = formula(prepped), data=train)
-
-log_reg_fit
-
-test_df <- ctest %>%
-  as_tibble() %>%
-  mutate(diabetes = as_factor(diabetes))
-
-test <- prepped %>%
-  bake(test_df)
-
-class_pred <- tibble(estimate = log_reg_fit %>%
-                       predict(test, type="class") %>%
-                       pull(),
-               truth = test %>%
-                 pull(diabetes))
-
-accuracy(class_pred, estimate, truth) %>%
-  select(.metric, .estimate) %>%
-  knitr::kable(col.names = c("Metric", "Estimate"))
-
-class_prob_pred <- tibble(estimate = log_reg_fit %>%
-                            predict(test, type="prob") %>%
-                            pull(.pred_1),
-                          truth = test %>%
-                            pull(diabetes))
-
-
-roc_curve(class_prob_pred, truth, estimate) %>%
-  autoplot()
-
-roc_auc(class_prob_pred, truth, estimate) %>%
-  select(.metric, .estimate) %>%
-  knitr::kable(col.names = c("Metric", "Estimate"))
-```
-
-#Random forest
-
-```{r}
-folds <- train_df %>%
-  vfold_cv(v=5) %>% 
-  mutate(recipe = splits %>%
-           map(prepper, recipe = rec),
-         train = splits %>%
-           map(analysis),
-         test = splits %>%
-           map(assessment),
-         test_truth = test %>%
-           map("diabetes")
-         )
-
-n_predictors <- rec$var_info %>%
-  filter(role == "predictor") %>%
-  nrow()
-
-rf_param_df <- cross_df(list(mtry = seq(1, n_predictors),
-                          trees = seq(1, 10, 2),
-                          min_n = seq(1, 10, 2)))
-
-model_list <- rf_param_df %>%
-  as.list() %>%
-  pmap(
-    function(
-      mtry,
-      trees,
-      min_n)
-    rand_forest(mode = "classification",
-    mtry=mtry,
-    trees=trees,
-    min_n=min_n) %>%
-      set_engine("randomForest")
-  )
+#Output: The folds dataframe, but this with columns containing 1) models fitted on the training data
+#for the corresponding iteration and 2) predictions on the corresponding validation set
 
 predict_on_folds <- function(model, folds){
   prediction_df <- folds %>%
@@ -321,10 +241,9 @@ predict_on_folds <- function(model, folds){
   return(prediction_df)
 }
 
-cv_list <- model_list %>%
-  map(predict_on_folds,
-      folds=folds)
 
+#Input: Data frame containing truths and estimates in each row
+#Output: Average accuracy across all rows
 validation_score <- function(cv_df){
   cv_df %>%
     select(test_truth, test_estimate) %>%
@@ -341,6 +260,133 @@ validation_score <- function(cv_df){
     map_dbl(".estimate") %>%
     mean()
 }
+```
+
+We do some additional preparation that simplify preprocessing and ensures that the input is consistent across all methods. 
+
+```{r}
+library(recipes)
+library(rsample)
+rec <- train_df %>%
+  recipe() %>%
+  update_role(diabetes, new_role="outcome") %>%
+  update_role(-diabetes, new_role = "predictor") %>%
+  step_center(-diabetes) %>%
+  step_scale(-diabetes)
+
+
+prepped <- rec %>%
+  prep(retain=TRUE)
+
+train <- prepped %>%
+  juice()
+
+test_df <- ctest %>%
+  as_tibble() %>%
+  mutate(diabetes = as_factor(diabetes))
+
+test <- prepped %>%
+  bake(test_df)
+
+folds <- train_df %>%
+  vfold_cv(v=5) %>% 
+  mutate(recipe = splits %>%
+           map(prepper, recipe = rec),
+         train = splits %>%
+           map(analysis),
+         test = splits %>%
+           map(assessment),
+         test_truth = test %>%
+           map("diabetes")
+         )
+```
+
+
+
+#Logistic regression
+
+```{r}
+library(bestglm)
+library(yardstick)
+
+best_glm <- bestglm::bestglm(
+  ctrain %>%
+    select(-diabetes, diabetes),
+  family=binomial,
+  IC="AIC"
+  )$BestModel
+
+class_pred <- tibble(
+  estimate = best_glm %>%
+    predict(
+      ctest %>%
+        select(
+          -diabetes, diabetes),
+      type="response"
+      ) %>%
+    map_dbl(~.x > 0.5) %>%
+    as.factor(),
+  truth = test_df %>%
+    pull(diabetes)
+)
+
+class_prob_pred <- tibble(
+  estimate = best_glm %>%
+    predict(
+      ctest %>%
+        select(
+          -diabetes, diabetes),
+      type="response"
+      ),
+  truth = test_df %>%
+    pull(diabetes)
+)
+
+accuracy(class_pred, estimate, truth) %>%
+  select(.metric, .estimate) %>%
+  knitr::kable(col.names = c("Metric", "Estimate"))
+
+roc_curve(class_prob_pred, truth, estimate) %>%
+  autoplot()
+
+roc_auc(class_prob_pred, truth, estimate) %>%
+  select(.metric, .estimate) %>%
+  knitr::kable(col.names = c("Metric", "Estimate"))
+
+conf_mat(class_pred, truth, estimate) %>%
+  autoplot("heatmap")
+```
+
+#Random forest
+
+```{r}
+library(parsnip)
+
+n_predictors <- rec$var_info %>%
+  filter(role == "predictor") %>%
+  nrow()
+
+rf_param_df <- cross_df(list(mtry = seq(1, n_predictors),
+                          trees = seq(1, 26, 5) - c(0, rep(1,5)),
+                          min_n = seq(1, 20, 1)))
+
+model_list <- rf_param_df %>%
+  as.list() %>%
+  pmap(
+    function(
+      mtry,
+      trees,
+      min_n)
+    rand_forest(mode = "classification",
+    mtry=mtry,
+    trees=trees,
+    min_n=min_n) %>%
+      set_engine("randomForest")
+  )
+
+cv_list <- model_list %>%
+  map(predict_on_folds,
+      folds=folds)
 
 rf_param_df <- rf_param_df %>% mutate(accuracy = cv_list %>%
                                           map_dbl(validation_score))
@@ -352,17 +398,19 @@ best_accuracy <- rf_param_df %>%
 best_params <- rf_param_df %>%
   mutate(index = row_number()) %>%
   filter(accuracy == max(accuracy)) %>%
-  select(mtry, trees, min_n)
+  select(mtry, trees, min_n) %>% 
+  head(1)
 
-best_params
+best_params %>% knitr::kable()
 
 rf_estimator <- rand_forest(mode = "classification",
-                            mtry = 2,
-                            trees = 9,
-                            min_n = 5) %>%
+                            mtry = best_params %>% pull(mtry),
+                            trees = best_params %>% pull(trees),
+                            min_n = best_params %>% pull(min_n)) %>%
   set_engine("randomForest") %>%
   fit(formula = formula(prepped),
       data=train)
+
 
 results <- tibble(
   estimated_class = rf_estimator %>%
@@ -376,7 +424,10 @@ results <- tibble(
   truth = test %>%
     pull(diabetes))
 
-accuracy(results, truth, estimated_class)
+accuracy(results, truth, estimated_class) %>%
+  select(.metric, .estimate) %>%
+  knitr::kable(col.names = c("Metric", "Estimate"))
+
 
 roc_auc(results, truth, estimated_class_probs)
 
@@ -391,12 +442,14 @@ conf_mat(results, truth, estimated_class) %>%
 
 #Support vector machine
 
+Based on what was observed in the first section we choose a polynomial decision boundary. 
+
 ```{r, eval=FALSE}
 
 svm_param_df <- cross_df(
   list(
-    cost = map(seq(-1, -3, -1),  ~10^(.)),
-    rbf_sigma = map(seq(0, -4, -1),  ~10^(.))
+    cost = map(seq(-3, 3, 1),  ~10^(.)),
+    degree = seq(1, 5)
   )
 )
 
@@ -405,10 +458,10 @@ model_list <- svm_param_df %>%
   pmap(
     function(
       cost,
-      rbf_sigma)
-    svm_rbf(mode = "classification",
+      degree)
+    svm_poly(mode = "classification",
     cost=cost,
-    rbf_sigma=rbf_sigma) %>%
+    degree=degree) %>%
       set_engine("kernlab")
   )
 
@@ -426,16 +479,50 @@ best_accuracy <- svm_param_df %>% filter(accuracy == max(accuracy)) %>% select(a
 best_params <- svm_param_df %>%
   mutate(index = row_number()) %>%
   filter(accuracy == max(accuracy)) %>%
-  select(cost, rbf_sigma) %>%
-  head(1) %>%
-  as.list()
+  select(cost, degree) %>%
+  head(1)
+
+svm_estimator <- svm_poly(mode = "classification",
+                            cost = best_params %>% pull(cost),
+                            degree = best_params %>% pull(degree)) %>%
+  set_engine("kernlab") %>%
+  fit(formula = formula(prepped),
+      data=train)
+
+
+results <- tibble(
+  estimated_class = svm_estimator %>%
+    predict(new_data=test,
+            type="class") %>%
+    pull(.pred_class),
+  estimated_class_probs = svm_estimator %>%
+    predict(new_data=test,
+            type="prob") %>%
+    pull(.pred_1),
+  truth = test %>%
+    pull(diabetes))
+
+accuracy(results, truth, estimated_class) %>%
+  select(.metric, .estimate) %>%
+  knitr::kable(col.names = c("Metric", "Estimate"))
+
+
+roc_auc(results, truth, estimated_class_probs)
+
+roc_curve(results, truth, estimated_class_probs) %>% 
+  autoplot()
+
+conf_mat(results, truth, estimated_class) %>%
+  autoplot("heatmap")
+
+
 ```
 
 #Neural network
 
-```{r, eval=FALSE}
+```{r}
 library(keras)
-keras::use_condaenv("base")
+use_condaenv("base")
 
 
 input_tensor <- layer_input(shape=ncol(train %>% select(c(-diabetes))))
