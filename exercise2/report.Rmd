@@ -1,9 +1,11 @@
 ---
-subtitle: "TMA4268 Statistical Learning V2019"
-title: "Compulsory exercise 2: Group XYZ"
+title: 'Compulsory exercise 2: Group XYZ'
 author: "NN1, NN2 and NN3"
 date: "`r format(Sys.time(), '%d %B, %Y')`"
-output: html_document
+output:
+  pdf_document: default
+  html_document: default
+subtitle: TMA4268 Statistical Learning V2019
 ---
   
   ```{r setup, include=FALSE}
@@ -163,7 +165,7 @@ train_df %>%
 ```
 We proceed by splitting the dataset into two parts, one where $\textrm{diabetes} = 1$ and another one where $\textrm{diabetes} = 0$. By creating boxplots for each of these cases we can observe if there's any observable difference between the mean and variance of the covariates when the data is grouped by the value of $\textrm{diabetes}$. We immediately observe that the mean $\textrm{glu}$ is considerably higher for the group where $\textrm{diabetes} = 1$. The differences are not as clear for the other covariates, but it's worth noting that the mean value of $\textrm{skin}$ and $\textrm{bp}$ also seem to higher for the group with $\textrm{diabetes} = 1$.
 
-```{r, fig.cap=c("Boxplot for dataset grouped by $\textrm{diabetes}$", )}
+```{r, fig.cap="Boxplot for dataset grouped by $\textrm{diabetes}$"}
 
 train_df %>%
   gather("variable", "value", c(-diabetes)) %>%
@@ -359,7 +361,7 @@ conf_mat(class_pred, truth, estimate) %>%
 
 #Random forest
 
-```{r}
+```{r, cache=TRUE}
 library(parsnip)
 
 n_predictors <- rec$var_info %>%
@@ -429,7 +431,9 @@ accuracy(results, truth, estimated_class) %>%
   knitr::kable(col.names = c("Metric", "Estimate"))
 
 
-roc_auc(results, truth, estimated_class_probs)
+roc_auc(results, truth, estimated_class_probs) %>% 
+  select(.metric, .estimate) %>%
+  knitr::kable(col.names = c("Metric", "Estimate"))
 
 roc_curve(results, truth, estimated_class_probs) %>% 
   autoplot()
@@ -444,7 +448,7 @@ conf_mat(results, truth, estimated_class) %>%
 
 Based on what was observed in the first section we choose a polynomial decision boundary. 
 
-```{r, eval=FALSE}
+```{r, cache=TRUE}
 
 svm_param_df <- cross_df(
   list(
@@ -507,7 +511,9 @@ accuracy(results, truth, estimated_class) %>%
   knitr::kable(col.names = c("Metric", "Estimate"))
 
 
-roc_auc(results, truth, estimated_class_probs)
+roc_auc(results, truth, estimated_class_probs) %>%
+  select(.metric, .estimate) %>%
+  knitr::kable(col.names = c("Metric", "Estimate"))
 
 roc_curve(results, truth, estimated_class_probs) %>% 
   autoplot()
@@ -520,30 +526,39 @@ conf_mat(results, truth, estimated_class) %>%
 
 #Neural network
 
-```{r}
+```{r, eval=FALSE}
 library(keras)
 use_condaenv("base")
 
+nn_train <- train %>% 
+  mutate(id = row_number())
 
-input_tensor <- layer_input(shape=ncol(train %>% select(c(-diabetes))))
+nn_val <- nn_train %>% 
+  sample_frac(size=0.2)
+
+nn_train <- nn_train %>%
+  anti_join(nn_val, by="id")
+
+input_tensor <- layer_input(shape=ncol(nn_train %>% select(-c(diabetes, id))))
 output_tensor <- input_tensor %>%
   layer_dense(units = 32, activation="relu") %>%
   layer_batch_normalization() %>%
   layer_dense(units = 8, activation="relu") %>% 
   layer_batch_normalization() %>% 
-  layer_dense(units = 8, activation="relu") %>% 
-  layer_batch_normalization() %>% 
   layer_dense(units = 1, activation="sigmoid")
 
 model <- keras_model(input_tensor, output_tensor)
-
 summary(model)
 
 model %>% compile("Adam", loss="binary_crossentropy", metrics = c("accuracy"))
 
-model %>% fit(train %>% select(-diabetes) %>% as.matrix(),
-              train %>% select(diabetes) %>% as.matrix(),
-              batch_size=8, epochs=15)
+model %>% fit(nn_train %>% select(-c(diabetes, id)) %>% as.matrix(),
+              nn_train %>% select(diabetes) %>% as.matrix(),
+              validation_data = list(nn_val %>% select(-c(diabetes, id)) %>% as.matrix(),
+                                     nn_val %>% select(diabetes) %>% as.matrix()),
+              callbacks = list(callback_early_stopping("val_acc")),
+              batch_size=4, epochs=5,
+              view_metrics=FALSE)
 
 model %>% evaluate(test %>% select(-diabetes) %>% as.matrix(),
                   test %>% select(diabetes) %>% as.matrix())
