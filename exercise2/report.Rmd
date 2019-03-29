@@ -122,12 +122,47 @@ plot(1:dim(X)[2],pca$rotation[,1],type="l",xlab="genes",ylab="weight",main="Firs
 ```
 
 **Q25:**: Explain what it means to use Euclidean distance and average linkage for hierarchical clustering. 
+Euclidean distance is the distance between points in a space of two or three dimensions. The average linkage is the mean intercluster dissimiliarity. Which means that we use the average dissimiliarty between pairs of clusters.
 
 **Q26:**: Perform hierarchical clustering with Euclidean distance and average linkage on the scaled gene expression in `Z`. Observe where our samples labelled as K562, MCF7 and `UNKNOWN` are placed in the dendrogram. Which conclusions can you draw from this?
+```{r}
+library(ggplot2)
+library(ggdendro)
+library(tidyverse)
+library(dendextend)
+hc.average=hclust(dist(Z), method="ave")
+str(hc.average)
+dhc <- as.dendrogram(hc.average,hang=FALSE,dLeaf = NULL)
+ddata <- dendro_data(dhc, type = "rectangle")
+tmpx = round(segment(ddata)$xend)
+tmpy = segment(ddata)$yend
+res = numeric(length = length(label(ddata)$x))+300
+for (i in seq(1,length(tmpx))){
+  if (res[tmpx[i]]>tmpy[i]){
+     res[tmpx[i]] = tmpy[i]
+  }
+}
+res
+col.text <- rep("red",64)
+col.text[(label(ddata)$label == "UNKNOWN")|
+           (label(ddata)$label == "K562A-repro")|
+           (label(ddata)$label == "K562B-repro")|
+           (label(ddata)$label == "MCF7A-repro")|
+           (label(ddata)$label == "MCF7D-repro")] = "blue"
+
+p <- ggplot(segment(ddata))+
+  geom_segment(aes(x = x, y = y, xend = xend, yend = yend))+
+  geom_text(data = label(ddata), angle = 90,
+            aes(x = x, y = res, label = label),colour = col.text, vjust = 0.5,hjust = 1.5, size = 2)+
+  scale_colour_discrete(c("blue","red"))+
+  theme_dendro()
   
-  **Q27:**: Study the R-code and plot below. Here we have performed hierarchical clustering based on thefirst 64 principal component instead of the gene expression data in `Z`. What is the difference between using all the gene expression data and using the first 64 principal components in the clustering? We have plotted the dendrogram together with a heatmap of the data. Explain what is shown in the heatmap. What is given on the horizontal axis, vertical axis, value in the pixel grid?
+p
+```
   
-  ```{r}
+  **Q27:**: Study the R-code and plot below. Here we have performed hierarchical clustering based on the first 64 principal component instead of the gene expression data in `Z`. What is the difference between using all the gene expression data and using the first 64 principal components in the clustering? We have plotted the dendrogram together with a heatmap of the data. Explain what is shown in the heatmap. What is given on the horizontal axis, vertical axis, value in the pixel grid?
+  
+```{r}
 library(pheatmap)
 npcs=64 
 pheatmap(pca$x[,1:npcs],scale="none",cluster_col=FALSE,cluster_row=TRUE,clustering_distance_rows = "euclidean",clustering_method="average",fontsize_row=5,fontsize_col=5)
