@@ -6,6 +6,14 @@ output:
   pdf_document: default
   html_document: default
 subtitle: TMA4268 Statistical Learning V2019
+  pdf_document:
+    latex_engine: xelatex
+    keep_tex: true
+header-includes:
+  - \newcommand{\matr}[1]{\boldsymbol{#1}}
+  - \usepackage{bm}
+  - \usepackage[a]{esvect}
+  - \renewcommand{\vect}[1]{\vv{\bm{#1}}}
 ---
   
   ```{r setup, include=FALSE}
@@ -89,6 +97,12 @@ summary(fit)
   # Problem 2: Unsupervised learning [3 points]
   
   **Q21:** What is the definition of a principal component score, and how is the score related to the eigenvectors of the matrix ${\hat {\bf R}}$. 
+  
+  The data is given in the matrix $\matr{X}$, where the columns are points in space. The columns are then scaled and shifted to mean $0$ and variance $1$, and we then standardized version of the observations $\matr{Z}$. From this standardized matrix we can estimate the gene-standardized covariance matrix by the equation 
+  $$
+  \matr{\hat{R}} = \frac{1}{n-1}\sum\limits_{i=1}^n(\matr{Z}_i- \matr{\bar{Z}})(\matr{Z}_i- \matr{\bar{Z}})^T.
+  $$
+  We now have a matrix of correlated variables and we want to turn it uncorrelated while keeping as much information about the data as possible. Doing this we get what is called \textit{principal component} of $\matr{\hat{R}}$ and we call it $
 
 **Q22:** Explain what is given in the plot with title "First eigenvector". Why are there only $n=64$ eigenvectors and $n=64$ principal component scores?
   
