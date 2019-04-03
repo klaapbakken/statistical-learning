@@ -510,7 +510,8 @@ summary(best_glm)
 
 broom::tidy(best_glm) %>% select(term, estimate, p.value) %>% knitr::kable()
 ```
-From the estimated values $\mathbf{\beta}$ shown above we can note that increased values for either of the covariates lead to higher values of $p_i$. It also worth noting that not all of the included covariates are significant. It's clear from the estimates and the related standard errors that $\textrm{bmi}$ and $\textrm{glu}$, which was identified as important during the exploratory phase, are important. It's worth noting that $\textrm{skin}$ is excluded, but this might make sense seeing as it was highly correlated with $\textrm{bmi}$. 
+
+From the estimated values $\mathbf{\beta}$ shown above we can note that increased values for any of the covariates lead to higher values of $p_i$. It can also be seen that not all of the included covariates are significant. It's clear from the estimates and the related standard errors that $\textrm{bmi}$ and $\textrm{glu}$, which was identified as important during the exploratory phase, are important. It's worth noting that $\textrm{skin}$ is excluded, but this might make sense seeing as it was highly correlated with $\textrm{bmi}$. 
 
 In the following snippet of code we test our model on the test set and report the accuracy and the AUC. We also include the confidence matrix and the ROC curve.
 
@@ -558,18 +559,14 @@ conf_mat(class_pred, truth, estimate) %>%
 
 #Random forest
 
-We proceed by fitting a random forest to our data. A random forest consists $B$ decision trees. The decision tree has parameters determing how many samples there needs to be in a node before we can split further. This is a tuning parameter. Only $m, m < p$ randomly chosen covariates can be considered at each split, and this is also a tuning parameter. When splitting a node we want to minimize the Gini index, given by
+We proceed by fitting a random forest to our data. A random forest consists $B$ decision trees. The decision tree has parameters determing how many samples there needs to be in a leaf node before we can split further. This is a tuning parameter, called $\texttt{min_n}$ in the code below. Only $m, m < p$ randomly chosen covariates can be considered at each split. This is also a tuning parameter, called $\texttt{mtry}$ below. When splitting a node we want to minimize the Gini index, given by
 
 $$
 G = \sum_{k=1}^K\hat{p}_{jk}(1-\hat{p}_{jk})
 $$
 for leaf node $j$. 
 
-
-The parameters are found through the use of K - fold cross validation, with $K = 5$. The parameter search is by no means exhaustive, but the should be sufficient for our purpose. The number of trees is fixed at $B = 100$, seeing as this is not a tuning parameter and it's common to simple set to be "high enough". 
-
-
-By taking a look at the mean decrease in the Gini index for the diffiferent covariates, we observe that $\textrm{bmi}$ and $\textrm{glu}$ are, again, very important.
+The parameters are found through the use of K - fold cross validation, with $K = 5$. The parameter search is by no means exhaustive, but the should be sufficient for our purpose. The number of trees is fixed at $B = 100$, seeing as this is not a tuning parameter and it's common to simple set to be "high enough". By taking a look at the mean decrease in the Gini index for the diffiferent covariates, we observe that $\textrm{bmi}$ and $\textrm{glu}$ are, again, very important. The covariates $\text{ped}$ and $\text{ped}$ also seem to be fairly important.
 
 ```{r, cache=TRUE}
 library(parsnip)
@@ -625,6 +622,7 @@ rf_estimator <- rand_forest(mode = "classification",
 
 rf_estimator$fit$importance
 ```
+
 The accuracy and AUC is shown below, together with plots of the ROC curve and the confusion matrix.
 
 
@@ -658,16 +656,23 @@ roc_curve(results, truth, estimated_class_probs) %>%
 conf_mat(results, truth, estimated_class) %>%
   autoplot("heatmap")
 ```
-
 #Support vector machine
 
 We proceed by considering a support vector classifier. This algorithms constructs a hyperplane that attempts to separate the data. The hyperplane is constructed by maximizing the margin $M$ subject to a number a constraints. 
 
-The hyperplane is defined by $L(\mathbf{x} \mid \mathbf{\beta}) = \beta_0 + \sum_{i=1}^n\beta_ix_i = 0$. By calculating $\textrm{sign}\left(L(\mathbf{x} \mid \mathbf{\beta})\mid_{\mathbf{x}=\mathbf{x}_{i}}\right)$ we obtain the predict class, given that classes are encoded as $Y \in \{-1, 1\}$.
+The hyperplane is defined by $f(\mathbf{x} \mid \mathbf{\beta}) = \beta_0 + \sum_{i=1}^n\beta_ix_i = 0$. By calculating $\textrm{sign}\left(f(\mathbf{x} \mid \mathbf{\beta})\mid_{\mathbf{x}=\mathbf{x}_{i}}\right)$ we obtain the predicted class, given that classes are encoded as $Y \in \{-1, 1\}$. In other words, the observations are classified by looking at which side of the hyperplane the observation is located. 
 
-In other words, the observations are classified by looking at which side of the hyperplane the observation is located. 
+Based on our observation in the first section, where we observed that $\text{skin}$ and $\text{skin}$ seems to increase the chance of $\text{diabetes} = 0$, we choose a polynomial decision boundary. The scatter plot of the mentioned covariates indicates that a linear decision boundary could do a good job of predicting the value of $\text{diabetes}$. 
 
-Based on what was observed in the first section we choose a polynomial decision boundary.  
+The procedure for finding the hyperplane consists of maximizing the margin $M$ subject to a set of constraints. The margin $M$ determines how far away from the hyperplane a point must be before it stops having an impact on the construction of the hyperplane. The related optimization problem becomes 
+
+$$
+\max_{\mathbf{\beta}, \mathbf{\epsilon}}M\quad\text{ subject to} \\
+\mathbf{\beta}^T\mathbf{\beta} = 1 \\
+y_i(\beta_0 + \sum_{i=1}^n\beta_ix_{ip}) \geq M(1 - \epsilon_i) \ \forall i = 1,\ldots,n\\
+\epsilon_i \geq 0 \\
+\sum_{i=1}^n\epsilon_i \leq C
+$$
 
 We use K - fold cross validation to determine the parameters, with $K = 5$. 
 
@@ -749,6 +754,11 @@ conf_mat(results, truth, estimated_class) %>%
 
 #Neural network
 
+A fully-connected feedforward neural network consists of a series of hidden layers, with each layer consisting of a given number of units. Given an input vector $\mathbf{X}$, each unit in the first layer computes an output $\phi\left(\mathbf{X}\mathbf{w}_i + b_i\right)$. The function $\phi$ is referred to as the activation function. The output of the entire layer is then either passed to another hidden layer, where the process is repeated, or used as the final output. The weights of the different layers in the network, $\mathbf{W} = \begin{bmatrix} w_1,\ldots,w_n\end{bmatrix}^T$ and $\mathbf{b}$, can be estimated by minimizing a loss function with respect to the weights. This is done by computing the gradient of the loss function through a technique known as backpropagation, and applying a numerical optimization method in order to minimize the loss function. 
+
+When fitting the neural network to diabetes - classification problem we use the rectified linear unit $\phi(x) = \max(0, x)$ as the activation function in the hidden layers and the sigmoid function $\phi(x) = \frac{1}{1 + e^{-x}}$ in the output layer. 
+We use binary crossentropy as the loss function, seeing as this is the common choice for binary classification tasks. In order to avoid overfitting, which is a common problem with neural networks, we stop our training as seen as the loss computed on the validation set starts declining. 
+
 ```{r, eval=FALSE}
 library(keras)
 use_condaenv("base")
@@ -789,7 +799,6 @@ history %>% plot() + xlim(0, length(history$metrics$acc))
 ```
 
 
-
-
-
 **Q30:** Conclude with choosing a winning method, and explain why you mean that this is the winning method.
+
+Logistic regression achieves the highest accuracy and the highest AUC. The other methods are not far behind, but has additional disadvantages that make them less attractive. Logistic regression is fairly easy to interpret due to relation between the success probability and the values of the covariates. The random forest is harder to interpret due to the high number of trees that are involved. The random nature of the random forest is also a downside. The support vector classifier is very easy to interpret for $p = 2$ and $p = 3$, but becomes harder to both visualize and explain for high-dimensional data. Neural networks are notoriously hard to interpret. This, in combination with it's inability to reliably perform better than the logistic regression, makes it less desirable than the logistic regression in this case. We're therefore led to choose the logistic regression as the best model for this particular problem. 
