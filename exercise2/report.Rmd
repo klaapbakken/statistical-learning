@@ -324,7 +324,7 @@ There's
 
 ```{r}
 train_df %>%
-  ggplot(aes(x=glu, y=skin, color=diabetes)) +
+  ggplot(aes(x = glu, y = skin, color = diabetes)) +
   geom_jitter()
 ```
 
@@ -356,56 +356,64 @@ We start off by defining a number of functions that simplify tuning through the 
 #Output: The folds dataframe, but this with columns containing 1) models fitted on the training data
 #for the corresponding iteration and 2) predictions on the corresponding validation set
 
-predict_on_folds <- function(model, folds){
+predict_on_folds <- function(model, folds) {
   prediction_df <- folds %>%
-    mutate(fitted_model =
-             map2(
-               recipe,
-               train,
-               ~ model %>% 
-                 fit(
-                 formula(.x),
-                 data = bake(
-                   object = .x,
-                   new_data = .y),
-               )
-             ),
-           prediction =
-               pmap(
-                 lst(
-                   recipe,
-                   test,
-                   fitted_model),
-                 function(recipe, test, fitted_model)
-                   fitted_model %>%
-                   predict(new_data = bake(
-                            object = recipe,
-                            new_data = test),
-                           type="class"
-                   )
-                 ),
-           test_estimate = prediction %>%
-             map(".pred_class")
-               )
+    mutate(
+      fitted_model =
+        map2(
+          recipe,
+          train,
+          ~ model %>%
+            fit(
+              formula(.x),
+              data = bake(
+                object = .x,
+                new_data = .y
+              ),
+            )
+        ),
+      prediction =
+        pmap(
+          lst(
+            recipe,
+            test,
+            fitted_model
+          ),
+          function(recipe, test, fitted_model)
+            fitted_model %>%
+              predict(
+                new_data = bake(
+                  object = recipe,
+                  new_data = test
+                ),
+                type = "class"
+              )
+        ),
+      test_estimate = prediction %>%
+        map(".pred_class")
+    )
   return(prediction_df)
 }
 
 
-#Input: Data frame containing truths and estimates in each row
-#Output: Average accuracy across all rows
-validation_score <- function(cv_df){
+# Input: Data frame containing truths and estimates in each row
+# Output: Average accuracy across all rows
+validation_score <- function(cv_df) {
   cv_df %>%
     select(test_truth, test_estimate) %>%
     pmap(
       function(
-        test_truth,
-        test_estimate
-        ) 
-        tibble(test_truth,
-               test_estimate)) %>%
+                     test_truth,
+                     test_estimate)
+        tibble(
+          test_truth,
+          test_estimate
+        )
+    ) %>%
     map(accuracy,
-        truth=test_truth,
-        estimate=test_estimate) %>%
+      truth = test_truth,
+      estimate = test_estimate
+    ) %>%
     map_dbl(".estimate") %>%
     mean()
 }
@@ -423,11 +431,11 @@ test_df <- ctest %>%
 
 unscaled_rec <- train_df %>%
   recipe() %>%
-  update_role(diabetes, new_role="outcome") %>%
+  update_role(diabetes, new_role = "outcome") %>%
   update_role(-diabetes, new_role = "predictor")
 
 unscaled_prepped <- unscaled_rec %>%
-  prep(retain=TRUE)
+  prep(retain = TRUE)
 
 train_unscaled <- unscaled_prepped %>%
   juice()
@@ -436,27 +444,28 @@ test_unscaled <- unscaled_prepped %>%
   bake(test_df)
 
 unscaled_folds <- train_df %>%
-  vfold_cv(v=5) %>% 
-  mutate(recipe = splits %>%
-           map(prepper, recipe = unscaled_rec),
-         train = splits %>%
-           map(analysis),
-         test = splits %>%
-           map(assessment),
-         test_truth = test %>%
-           map("diabetes")
-         )
+  vfold_cv(v = 5) %>%
+  mutate(
+    recipe = splits %>%
+      map(prepper, recipe = unscaled_rec),
+    train = splits %>%
+      map(analysis),
+    test = splits %>%
+      map(assessment),
+    test_truth = test %>%
+      map("diabetes")
+  )
 
 scaled_rec <- train_df %>%
   recipe() %>%
-  update_role(diabetes, new_role="outcome") %>%
+  update_role(diabetes, new_role = "outcome") %>%
   update_role(-diabetes, new_role = "predictor") %>%
   step_center(-diabetes) %>%
   step_scale(-diabetes)
 
 
 scaled_prepped <- scaled_rec %>%
-  prep(retain=TRUE)
+  prep(retain = TRUE)
 
 train_scaled <- scaled_prepped %>%
   juice()
@@ -469,23 +478,24 @@ test_scaled <- scaled_prepped %>%
   bake(test_df)
 
 scaled_folds <- train_df %>%
-  vfold_cv(v=5) %>% 
-  mutate(recipe = splits %>%
-           map(prepper, recipe = scaled_rec),
-         train = splits %>%
-           map(analysis),
-         test = splits %>%
-           map(assessment),
-         test_truth = test %>%
-           map("diabetes")
-         )
+  vfold_cv(v = 5) %>%
+  mutate(
+    recipe = splits %>%
+      map(prepper, recipe = scaled_rec),
+    train = splits %>%
+      map(analysis),
+    test = splits %>%
+      map(assessment),
+    test_truth = test %>%
+      map("diabetes")
+  )
 ```
 
 
 
 #Logistic regression
 
-Our first method we want to explore is logistic regression. Logstic regression assumes that the response takes on values in $\{0, 1\}$. In addition, we assume that $Y_i, i = 1,\ldots, n$ is Bernoulli - distributed with sucess probability $p_i$. The logistic function has the form
+The first method we want to explore is logistic regression. Logstic regression assumes that the response takes on values in $\{0, 1\}$. In addition, we assume that $Y_i, i = 1,\ldots, n$ is Bernoulli - distributed with sucess probability $p_i$. The logistic function has the form
 
 $$
 p_i = \frac{\exp{\left(\beta_0 + \sum_{n=1}^p\beta_px_p\right)}}{1 + \exp{\left(\beta_0 + \sum_{n=1}^p\beta_px_p\right)}},
@@ -500,11 +510,11 @@ library(bestglm)
 library(yardstick)
 
 best_glm <- bestglm::bestglm(
-    ctrain %>% 
+  ctrain %>%
     select(-diabetes, diabetes),
-  family=binomial,
-  IC="AIC"
-  )$BestModel
+  family = binomial,
+  IC = "AIC"
+)$BestModel
 
 summary(best_glm)
 
@@ -521,10 +531,11 @@ class_pred <- tibble(
     predict(
       ctest %>%
         select(
-          -diabetes, diabetes),
-      type="response"
-      ) %>%
-    map_dbl(~.x > 0.5) %>%
+          -diabetes, diabetes
+        ),
+      type = "response"
+    ) %>%
+    map_dbl(~ .x > 0.5) %>%
     as.factor(),
   truth = test_df %>%
     pull(diabetes)
@@ -535,9 +546,10 @@ class_prob_pred <- tibble(
     predict(
       ctest %>%
         select(
-          -diabetes, diabetes),
-      type="response"
-      ),
+          -diabetes, diabetes
+        ),
+      type = "response"
+    ),
   truth = test_df %>%
     pull(diabetes)
 )
@@ -568,37 +580,49 @@ for leaf node $j$.
 
 The parameters are found through the use of K - fold cross validation, with $K = 5$. The parameter search is by no means exhaustive, but the should be sufficient for our purpose. The number of trees is fixed at $B = 100$, seeing as this is not a tuning parameter and it's common to simple set to be "high enough". By taking a look at the mean decrease in the Gini index for the diffiferent covariates, we observe that $\textrm{bmi}$ and $\textrm{glu}$ are, again, very important. The covariates $\text{ped}$ and $\text{ped}$ also seem to be fairly important.
 
-```{r, cache=TRUE}
+```{r}
 library(parsnip)
 
 n_predictors <- unscaled_rec$var_info %>%
   filter(role == "predictor") %>%
   nrow()
 
-rf_param_df <- cross_df(list(mtry = seq(1, n_predictors),
-                          trees = list(100),
-                          min_n = seq(1, 20, 1)))
+# Defining grid used for hyperparameter search.
+rf_param_df <- cross_df(list(
+  mtry = seq(1, n_predictors),
+  trees = list(100),
+  min_n = seq(1, 20, 1)
+))
 
+# Creating a list of models corresponding to the different choices
+# of hyperparameter values
 model_list <- rf_param_df %>%
   as.list() %>%
   pmap(
     function(
-      mtry,
-      trees,
-      min_n)
-    rand_forest(mode = "classification",
-    mtry=mtry,
-    trees=trees,
-    min_n=min_n) %>%
-      set_engine("randomForest")
+                 mtry,
+                 trees,
+                 min_n)
+      rand_forest(
+        mode = "classification",
+        mtry = mtry,
+        trees = trees,
+        min_n = min_n
+      ) %>%
+        set_engine("randomForest")
   )
 
+# Fitting the different models
 cv_list <- model_list %>%
   map(predict_on_folds,
-      folds=unscaled_folds)
+    folds = unscaled_folds
+  )
 
+
+# Evaluating the performance of the different models by extracting the
+# mean accuracy across all folds
 rf_param_df <- rf_param_df %>% mutate(accuracy = cv_list %>%
-                                          map_dbl(validation_score))
+  map_dbl(validation_score))
 
 best_accuracy <- rf_param_df %>%
   filter(accuracy == max(accuracy)) %>%
@@ -607,20 +631,27 @@ best_accuracy <- rf_param_df %>%
 best_params <- rf_param_df %>%
   mutate(index = row_number()) %>%
   filter(accuracy == max(accuracy)) %>%
-  select(mtry, trees, min_n) %>% 
+  select(mtry, trees, min_n) %>%
   head(1)
 
 best_params %>% knitr::kable()
 
-rf_estimator <- rand_forest(mode = "classification",
-                            mtry = best_params %>% pull(mtry),
-                            trees = best_params %>% pull(trees),
-                            min_n = best_params %>% pull(min_n)) %>%
-  set_engine("randomForest") %>%
-  fit(formula = formula(scaled_prepped),
-      data=train_unscaled)
 
-rf_estimator$fit$importance
+# Fitting a model using the entire test set, with
+# parameters as found through cross-validation
+rf_estimator <- rand_forest(
+  mode = "classification",
+  mtry = best_params %>% pull(mtry),
+  trees = best_params %>% pull(trees),
+  min_n = best_params %>% pull(min_n)
+) %>%
+  set_engine("randomForest") %>%
+  fit(
+    formula = formula(unscaled_prepped),
+    data = train_unscaled
+  )
+
+rf_estimator$fit$importance %>% knitr::kable()
 ```
 
 The accuracy and AUC is shown below, together with plots of the ROC curve and the confusion matrix.
@@ -631,26 +662,31 @@ The accuracy and AUC is shown below, together with plots of the ROC curve and th
 
 results <- tibble(
   estimated_class = rf_estimator %>%
-    predict(new_data=test_unscaled,
-            type="class") %>%
+    predict(
+      new_data = test_unscaled,
+      type = "class"
+    ) %>%
     pull(.pred_class),
   estimated_class_probs = rf_estimator %>%
-    predict(new_data=test_unscaled,
-            type="prob") %>%
+    predict(
+      new_data = test_unscaled,
+      type = "prob"
+    ) %>%
     pull(.pred_1),
   truth = test_unscaled %>%
-    pull(diabetes))
+    pull(diabetes)
+)
 
 accuracy(results, truth, estimated_class) %>%
   select(.metric, .estimate) %>%
   knitr::kable(col.names = c("Metric", "Estimate"))
 
 
-roc_auc(results, truth, estimated_class_probs) %>% 
+roc_auc(results, truth, estimated_class_probs) %>%
   select(.metric, .estimate) %>%
   knitr::kable(col.names = c("Metric", "Estimate"))
 
-roc_curve(results, truth, estimated_class_probs) %>% 
+roc_curve(results, truth, estimated_class_probs) %>%
   autoplot()
 
 conf_mat(results, truth, estimated_class) %>%
@@ -676,11 +712,11 @@ $$
 
 We use K - fold cross validation to determine the parameters, with $K = 5$. 
 
-```{r, cache=TRUE}
+```{r}
 
 svm_param_df <- cross_df(
   list(
-    cost = map(seq(-3, 2, 1),  ~10^(.)),
+    cost = map(seq(-3, 2, 1), ~ 10^(.)),
     degree = seq(1, 4)
   )
 )
@@ -689,20 +725,23 @@ model_list <- svm_param_df %>%
   as.list() %>%
   pmap(
     function(
-      cost,
-      degree)
-    svm_poly(mode = "classification",
-    cost=cost,
-    degree=degree) %>%
-      set_engine("kernlab")
+                 cost,
+                 degree)
+      svm_poly(
+        mode = "classification",
+        cost = cost,
+        degree = degree
+      ) %>%
+        set_engine("kernlab")
   )
 
 cv_list <- model_list %>% map(predict_on_folds,
-                              folds=scaled_folds)
+  folds = scaled_folds
+)
 
 svm_param_df <- svm_param_df %>%
   mutate(accuracy = cv_list %>%
-           map_dbl(validation_score))
+    map_dbl(validation_score))
 
 svm_param_df %>% filter(accuracy == max(accuracy))
 
@@ -714,25 +753,34 @@ best_params <- svm_param_df %>%
   select(cost, degree) %>%
   head(1)
 
-svm_estimator <- svm_poly(mode = "classification",
-                            cost = best_params %>% pull(cost),
-                            degree = best_params %>% pull(degree)) %>%
+svm_estimator <- svm_poly(
+  mode = "classification",
+  cost = best_params %>% pull(cost),
+  degree = best_params %>% pull(degree)
+) %>%
   set_engine("kernlab") %>%
-  fit(formula = formula(scaled_prepped),
-      data=train_scaled)
+  fit(
+    formula = formula(scaled_prepped),
+    data = train_scaled
+  )
 
 
 results <- tibble(
   estimated_class = svm_estimator %>%
-    predict(new_data=test_scaled,
-            type="class") %>%
+    predict(
+      new_data = test_scaled,
+      type = "class"
+    ) %>%
     pull(.pred_class),
   estimated_class_probs = svm_estimator %>%
-    predict(new_data=test_scaled,
-            type="prob") %>%
+    predict(
+      new_data = test_scaled,
+      type = "prob"
+    ) %>%
     pull(.pred_1),
   truth = test_scaled %>%
-    pull(diabetes))
+    pull(diabetes)
+)
 
 accuracy(results, truth, estimated_class) %>%
   select(.metric, .estimate) %>%
@@ -743,13 +791,11 @@ roc_auc(results, truth, estimated_class_probs) %>%
   select(.metric, .estimate) %>%
   knitr::kable(col.names = c("Metric", "Estimate"))
 
-roc_curve(results, truth, estimated_class_probs) %>% 
+roc_curve(results, truth, estimated_class_probs) %>%
   autoplot()
 
 conf_mat(results, truth, estimated_class) %>%
   autoplot("heatmap")
-
-
 ```
 
 #Neural network
@@ -759,41 +805,50 @@ A fully-connected feedforward neural network consists of a series of hidden laye
 When fitting the neural network to diabetes - classification problem we use the rectified linear unit $\phi(x) = \max(0, x)$ as the activation function in the hidden layers and the sigmoid function $\phi(x) = \frac{1}{1 + e^{-x}}$ in the output layer. 
 We use binary crossentropy as the loss function, seeing as this is the common choice for binary classification tasks. In order to avoid overfitting, which is a common problem with neural networks, we stop our training as seen as the loss computed on the validation set starts declining. 
 
+
 ```{r, eval=FALSE}
 library(keras)
 use_condaenv("base")
 
-nn_train <- train_scaled %>% 
+nn_train <- train_scaled %>%
   mutate(id = row_number())
 
-nn_val <- nn_train %>% 
-  sample_frac(size=0.2)
+nn_val <- nn_train %>%
+  sample_frac(size = 0.2)
 
 nn_train <- nn_train %>%
-  anti_join(nn_val, by="id")
+  anti_join(nn_val, by = "id")
 
-input_tensor <- layer_input(shape=ncol(nn_train %>% select(-c(diabetes, id))))
+input_tensor <- layer_input(shape = ncol(nn_train %>% select(-c(diabetes, id))))
 output_tensor <- input_tensor %>%
-  layer_dense(units = 8, activation="relu") %>%
-  layer_dropout(0.3) %>% 
-  layer_dense(units = 4, activation="relu") %>% 
-  layer_dense(units = 1, activation="sigmoid")
+  layer_dense(units = 8, activation = "relu") %>%
+  layer_dense(units = 4, activation = "relu") %>%
+  layer_dense(units = 1, activation = "sigmoid")
 
 model <- keras_model(input_tensor, output_tensor)
 summary(model)
 
-model %>% compile("Adam", loss="binary_crossentropy", metrics = c("accuracy"))
+model %>% compile("Adam", loss = "binary_crossentropy", metrics = c("accuracy"))
 
 history <- model %>% fit(nn_train %>% select(-c(diabetes, id)) %>% as.matrix(),
-              nn_train %>% select(diabetes) %>% as.matrix(),
-              validation_data = list(nn_val %>% select(-c(diabetes, id)) %>% as.matrix(),
-                                     nn_val %>% select(diabetes) %>% as.matrix()),
-              callbacks = list(callback_early_stopping()),
-              batch_size=1, epochs=50,
-              view_metrics=FALSE)
+  nn_train %>% select(diabetes) %>% as.matrix(),
+  validation_data = list(
+    nn_val %>% select(-c(diabetes, id)) %>% as.matrix(),
+    nn_val %>% select(diabetes) %>% as.matrix()
+  ),
+  callbacks = list(callback_early_stopping()),
+  batch_size = 1, epochs = 50,
+  view_metrics = FALSE
+)
 
-model %>% evaluate(test_scaled %>% select(-diabetes) %>% as.matrix(),
-                  test_scaled %>% select(diabetes) %>% as.matrix())
+model %>% evaluate(
+  test_scaled %>% select(-diabetes) %>% as.matrix(),
+  test_scaled %>% select(diabetes) %>% as.matrix()
+)
+
+(model %>% predict(
+  test_scaled %>% select(-diabetes) %>% as.matrix()
+) %>% map_int(~.x > 0.5) == test_scaled %>% pull(diabetes)) %>% mean() 
 
 history %>% plot() + xlim(0, length(history$metrics$acc))
 ```
@@ -801,4 +856,4 @@ history %>% plot() + xlim(0, length(history$metrics$acc))
 
 **Q30:** Conclude with choosing a winning method, and explain why you mean that this is the winning method.
 
-Logistic regression achieves the highest accuracy and the highest AUC. The other methods are not far behind, but has additional disadvantages that make them less attractive. Logistic regression is fairly easy to interpret due to relation between the success probability and the values of the covariates. The random forest is harder to interpret due to the high number of trees that are involved. The random nature of the random forest is also a downside. The support vector classifier is very easy to interpret for $p = 2$ and $p = 3$, but becomes harder to both visualize and explain for high-dimensional data. Neural networks are notoriously hard to interpret. This, in combination with it's inability to reliably perform better than the logistic regression, makes it less desirable than the logistic regression in this case. We're therefore led to choose the logistic regression as the best model for this particular problem. 
+Logistic regression achieves the highest accuracy and the highest AUC. The other methods are not far behind, but has additional disadvantages that make them less attractive. Logistic regression is fairly easy to interpret due to relation between the success probability and the values of the covariates. The random forest is harder to interpret due to the high number of trees that are involved. The random nature of the random forest is also a downside. The support vector classifier is very easy to interpret for $p = 2$ and $p = 3$, but becomes harder to both visualize and explain for high-dimensional data. Neural networks are notoriously hard to interpret due to it's very complex structure. This, in combination with it's inability to reliably perform better than the logistic regression, makes it less desirable than the logistic regression in this case. When taking all of this into account we're led to choose the logistic regression as the best model for this particular problem. 
