@@ -512,22 +512,12 @@ for (i in seq(1,length(quotient_variance))){
 }
 ```
 
-<<<<<<< HEAD
-To find at which number of \textit{principal components}, they explain $80\%$ of to total variance we need to write some code to calculate it. This is done in the code above. The result of which is $`r res_i`$. 
-The reason `sum(pca$sdev^2)=p` is because of our scaling. The variance has been scaled to $1$ and therefore by the $\sum_{i=1}^p 1 = p$.
-
-
-  **Q24**: Study the PC1 vs PC2 plot, and comment on the groupings observed. What can you say about the placement of the `K262`, `MCF7` and `UNKNOWN` samples? Produce the same plot for two other pairs of PCs and comment on your observations.
-
-In Figure \ref{fig:pc1pc2} we see the first \textit{principal component} on the x-axis versus the second \textit{principal component} on the y-axis. The `K562` cells, that we know are part of the `LEUKEMIA` familiy, is clustered with exactly these cells for both versions \textit{A} and \textit{B}. `MCF7` cells is part of the `BREAST` cancer famility. In the figure it is clusterted together with one of these cells, but also together with `COLON`Cells. The `BREAST`cancer cells doesn't really have any clustered effects in this plot, but the `COLON`cells are very clustered in the top right corner. In the top left corner there is a big cluster of many different cancer cells, `NSCLC`, `OVARIAN` and `RENAL` in particular. And within this cluster the `UNKNOWN`cells is placed. Which means that we can't really give a clear indication of which cancer familiy the `UNKNOWN` cells are part of. 
-=======
 In he code above we find the number of principal components needed to explain 80% of the total variance. The result is `r res_i``. 
 The reason `sum(pca$sdev^2)=p` is because of our scaling. All principal components explain all the variance (so the total variance is $p$) and the variances have been scaled to 1. 
 
   **Q24**: Study the PC1 vs PC2 plot, and comment on the groupings observed. What can you say about the placement of the `K262`, `MCF7` and `UNKNOWN` samples? Produce the same plot for two other pairs of PCs and comment on your observations.
 
 In Figure \ref{fig:pc1pc2} we see the first \textit{principal component} on the x-axis versus the second \textit{principal component} on the y-axis. The `K562` cells, that we know are part of the `LEUKEMIA` familiy, are clustered with exactly these cells for both versions \textit{A} and \textit{B}. `MCF7` cells are part of the `BREAST` cancer familiy. In the figure it is clusterted together with one of these cells, but also together with `COLON` cells. The `BREAST` cancer cells don't really have any clustered effects in this plot, but the `COLON` cells are very clustered in the top right corner. In the top left corner there is a big cluster of many different cancer cells, `NSCLC`, `OVARIAN` and `RENAL` in particular. And within this cluster the `UNKnOWN` cells are placed. Which means that we can't really give a clear conclusion of which cancer familiy the `UNKNOWN` cells are part of. 
->>>>>>> Fix errors
 
 We plott the `PC32` vs. `PC33` in Figure \ref{fig:pc32pc33} for when the \textit{principal components} explain $80\%$ of the variance. We also plott the `PC63` vs. `PC64` for when the variance is as small as possible and when the null vector to transform the principal component is used. 
 In these plots we can't see any significant clustering, that would classifiy the cancer cells in any particular way. 
