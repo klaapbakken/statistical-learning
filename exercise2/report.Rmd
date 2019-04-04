@@ -512,13 +512,13 @@ for (i in seq(1,length(quotient_variance))){
 }
 ```
 
-To find at which number of \textit{principal components}, they explain $80\%$ of to total variance we need to write some code to calculate it. This is done in the code above. The result of which is `r res_i``. 
+To find at which number of \textit{principal components}, they explain $80\%$ of to total variance we need to write some code to calculate it. This is done in the code above. The result of which is $`r res_i`$. 
 The reason `sum(pca$sdev^2)=p` is because of our scaling. The variance has been scaled to $1$ and therefore by the $\sum_{i=1}^p 1 = p$.
 
 
   **Q24**: Study the PC1 vs PC2 plot, and comment on the groupings observed. What can you say about the placement of the `K262`, `MCF7` and `UNKNOWN` samples? Produce the same plot for two other pairs of PCs and comment on your observations.
 
-In Figure \ref{fig:pc1pc2} we see the first \textit{principal component} on the x-axis versus the second \textit{principal component} on the y-axis. The `K562` cells, that we know are part of the `LEUKEMIA` familiy, is clustered with exactly these cells for both versions \textit{A} and \textit{B}. `MCF7` cells is part of the `BREAST` cancer famility. In the figure it is clusterted together with one of these cells, but also together with `COLON`Cells. The `BREAST`cancer cells doesn't really have any clustered effects in this plot, but the `COLON`cells are very clustered in the top right corner. In the top left corner there is a big cluster of many different cancer cells, `NSCLC`, `OVARIAN` and `RENAL` in particular. And within this cluster the `UNKnOWN`cells is placed. Which means that we can't really give a clear indication of which cancer familiy the `UNKNOWN` cells are part of. 
+In Figure \ref{fig:pc1pc2} we see the first \textit{principal component} on the x-axis versus the second \textit{principal component} on the y-axis. The `K562` cells, that we know are part of the `LEUKEMIA` familiy, is clustered with exactly these cells for both versions \textit{A} and \textit{B}. `MCF7` cells is part of the `BREAST` cancer famility. In the figure it is clusterted together with one of these cells, but also together with `COLON`Cells. The `BREAST`cancer cells doesn't really have any clustered effects in this plot, but the `COLON`cells are very clustered in the top right corner. In the top left corner there is a big cluster of many different cancer cells, `NSCLC`, `OVARIAN` and `RENAL` in particular. And within this cluster the `UNKNOWN`cells is placed. Which means that we can't really give a clear indication of which cancer familiy the `UNKNOWN` cells are part of. 
 
 We plotted the `PC32` vs. `PC33` in Figure \ref{fig:pc32pc33} for when the \textit{principal components} explain $80\%$ of the variance. We also plotted the `PC63` vs. `PC64` for when the variance is as small as possible and when the null vector to transform the principal component is used. 
 In these plots we can't see any significant clustering, that would classifiy the cancer cells in any perticular way. 
@@ -544,10 +544,10 @@ legend("bottomright",legend = colsvsnames[,2],cex=0.55,col=cols,pch = pch.vec)
 We first look at the average linkage. The algorithm for hierarchical clustering is given by
 
 \begin{enumerate}
-\item\textbf{Given:}
-\item A set of $n$ observations \matr{X}
+\item \textbf{Given:}
+\item A set of $n$ observations $\matr{X}$
 \item A dissimiliarity function \texttt{f(x)}
-\item \texttt{While #clusters > 1; Do:}
+\item \texttt{While $\#\text{clusters} > 1$; Do:}
 \begin{enumerate}
 \item Find two clusters that are the least dissimilar
 \item Create new cluster of these
@@ -567,7 +567,7 @@ $$
 with $n_{C_k}$ being the number of points in cluster number $k$, with the points having dimension $P$. The Euclidean distance is given by $||x_1- x_2||_2 = \sqrt{(x_1^2 + x_2^2)}$. Using this on the scaled observations $\matr{Z}$, one would end up with the partition shown in Figure \ref{fig:dendogram}.
 
 **Q26:**: Perform hierarchical clustering with Euclidean distance and average linkage on the scaled gene expression in `Z`. Observe where our samples labelled as `K562`, `MCF7` and `UNKNOWN` are placed in the dendrogram. Which conclusions can you draw from this?
-```{r, fig.cap = "\\label{fig:dendogram} Dendogram of hierarchical clustering with euclidean distance and average linkage on \\matr{Z}"}
+```{r, fig.cap = "\\label{fig:dendogram} Dendogram of hierarchical clustering with euclidean distance and average linkage on $\\matr{Z}$"}
 library(ggplot2)
 library(ggdendro)
 library(tidyverse)
@@ -652,7 +652,7 @@ train_df %>%
 ```
 We proceed by splitting the dataset into two parts, one where $\textrm{diabetes} = 1$ and another one where $\textrm{diabetes} = 0$. By creating boxplots for each of these cases we can inspect if there's any observable difference between the mean and variance of the covariates when the data is grouped by the value of $\textrm{diabetes}$. We immediately observe that the mean $\textrm{glu}$ is considerably higher for the group where $\textrm{diabetes} = 1$. The differences are not as clear for the other covariates, but it's worth noting that the mean value of $\textrm{skin}$ and $\textrm{bp}$ also seems to higher for the group with $\textrm{diabetes} = 1$.
 
-```{r, fig.cap="Boxplot for dataset grouped by $\textrm{diabetes}$"}
+```{r, fig.cap="Boxplot for dataset grouped by $\\textrm{diabetes}$"}
 
 train_df %>%
   gather("variable", "value", c(-diabetes)) %>%
@@ -834,7 +834,7 @@ scaled_folds <- train_df %>%
 
 
 
-#Logistic regression
+# Logistic regression
 
 The first method we want to explore is logistic regression. Logstic regression assumes that the response takes on values in $\{0, 1\}$. In addition, we assume that $Y_i, i = 1,\ldots, n$ is Bernoulli - distributed with sucess probability $p_i$. The logistic function has the form
 
@@ -910,9 +910,9 @@ conf_mat(class_pred, truth, estimate) %>%
   autoplot("heatmap")
 ```
 
-#Random forest
+# Random forest
 
-We proceed by fitting a random forest to our data. A random forest consists $B$ decision trees. The decision tree has parameters determing how many samples there needs to be in a leaf node before we can split further. This is a tuning parameter, called $\texttt{min_n}$ in the code below. Only $m, m < p$ randomly chosen covariates can be considered at each split. This is also a tuning parameter, called $\texttt{mtry}$ below. When splitting a node we want to minimize the Gini index, given by
+We proceed by fitting a random forest to our data. A random forest consists $B$ decision trees. The decision tree has parameters determing how many samples there needs to be in a leaf node before we can split further. This is a tuning parameter, called $\texttt{min\_n}$ in the code below. Only $m, m < p$ randomly chosen covariates can be considered at each split. This is also a tuning parameter, called $\texttt{mtry}$ below. When splitting a node we want to minimize the Gini index, given by
 
 $$
 G = \sum_{k=1}^K\hat{p}_{jk}(1-\hat{p}_{jk})
