@@ -4,7 +4,11 @@ author: "NN1, NN2 and NN3"
 date: "`r format(Sys.time(), '%d %B, %Y')`"
 output:
   html_document: default
+<<<<<<< HEAD
   pdf_document: default
+=======
+  # pdf_document: default
+>>>>>>> Solve problem 1
 subtitle: TMA4268 Statistical Learning V2019
   pdf_document:
     latex_engine: xelatex
@@ -44,59 +48,420 @@ install.packages("e1071") # for support vector machines
 install.packages("nnet") # for feed forward neural networks
 ```
 
+```{r}
+library(tidyverse)
+library(bestglm)
+library(glmnet)
+library(tree)
+library(randomForest)
+```
+
+
 # Problem 1: Regression [6 points]
 
 ```{r}
 all=dget("https://www.math.ntnu.no/emner/TMA4268/2019v/data/diamond.dd")
-dtrain=all$dtrain
-dtest=all$dtest
+dtrain=as_tibble(all$dtrain)
+dtest=as_tibble(all$dtest)
 ```
 
 **Q1**: Would you choose `price` or `logprice` as response variable? Justify your choice. Next, plot your choice of response pairwise with `carat`, `logcarat`, `color`, `clarity` and `cut`. Comment.
 
-Use the local regression model $\texttt{logprice} = \beta_0 + \beta_1 \texttt{carat}+ \beta_2 \texttt{carat}^2$ weighted by the tricube kernel $K_{i0}$. 
+A:
+To determine if we should use `price` or `logprice` as response variable we would
+like to fit a model an then assess our assumptions. This can be e.g. iid Gaussian
+residuals for the standard linear model. But we are going to fit different models
+with different (or no) such assumptions. Since we are going to fit a linear
+model (using lasso), and we see from the residuals below that `logprice` is 
+"closer" to being a
+linear function of the covariates than `price`, we choose to work with 
+`logprice` as our response.
 
-**Q2:** What is the predicted price of a diamond weighting 1 carat. Use the closest 20% of the observations.  
+```{r}
+lm_price = lm(price ~ . -logprice -logcarat, dtrain)
+lm_logprice = lm(logprice ~ . -price -carat, dtrain)
+
+# Code adapted from Module 3 example
+ggplot(lm_price, aes(.fitted, .stdresid)) + 
+  geom_point(pch = 21) + 
+  geom_hline(yintercept = 0, linetype = "dashed") + 
+  geom_smooth(se = FALSE, col = "red", size = 0.5, method = "loess") + 
+  labs(x = "Fitted values", y = "Standardized residuals", 
+       title = "Fitted values vs standardized residuals", 
+       subtitle = deparse(lm_price$call))
+
+ggplot(lm_logprice, aes(.fitted, .stdresid)) + 
+  geom_point(pch = 21) + 
+  geom_hline(yintercept = 0, linetype = "dashed") + 
+  geom_smooth(se = FALSE, col = "red", size = 0.5, method = "loess") + 
+  labs(x = "Fitted values", y = "Standardized residuals", 
+       title = "Fitted values vs standardized residuals", 
+       subtitle = deparse(lm_logprice$call))
+```
+
+We plot `logprice` pairwise with `carat`, `logcarat`, `color`, `clarity` and 
+`cut`. If there is any connection between the price and `carat`, `logcarat` 
+and `color`, it is not easy to see from these plots. There is clearly a 
+connection between the carats and the price, however; `logprice` seems to 
+increase approximately linearly with `logcarat`.
+
+```{r}
+dtrain_log = select(dtrain, -price)
+dtrain_log %>%
+  mutate_if(is.factor, as.character) %>%
+  gather(key, value, cut, color, clarity) %>%
+  ggplot(aes(value, logprice)) +
+    facet_wrap(~key, scales='free') +
+    geom_point(alpha=0.1, col="blue")
+dtrain_log %>%
+  gather(key, value, carat, logcarat) %>%
+  ggplot(aes(value, logprice)) +
+    facet_wrap(~key, scales='free') +
+    geom_point(alpha=0.1, col="blue")
+```
+
+Use the local regression model 
+$\texttt{logprice} = \beta_0 + \beta_1 \texttt{carat}+ \beta_2 \texttt{carat}^2$
+weighted by the tricube kernel $K_{i0}$. 
+
+A: We use the local regression model $\texttt{logprice} = \beta_0 + \beta_1 
+\texttt{carat} + \beta_2 \texttt{carat}^2$ weighted by the tricube kernel
+
+$$
+K_{i0} = \left( 1 - \left|\frac{x_0 - x_i}{x_0 - x_k}\right|^3 \right)^3_+ \, ,
+$$
+where $x_k$ is the $k$th closest observation to $x_0$. This is implemented in 
+the following code (with $k =$ 20\% of the total number of observations).
+
+```{r}
+fit_lr = loess(logprice ~ carat, data=dtrain_log, span=0.2, degree=2)
+tibble(carat=dtrain$carat, logprice=dtrain$logprice, fitted=fit_lr$fitted) %>%
+  ggplot() +
+    geom_point(aes(carat, logprice), alpha=0.1, col="blue") +
+    geom_line(aes(carat, fitted), col="darkred")
+```
+
+
+**Q2:** What is the predicted price of a diamond weighting 1 carat. Use the closest 20% of the observations.
+
+A: The predicted logprice of a diamond weighing 1 carat is 
+`r predict(fit_lr, 1)`. The standard error is 
+`r predict(fit_lr, 1, se=T)$se.fit`. The predicted price is 
+`r 10**predict(fit_lr, 1)`.
+
 **Q3:** What choice of $\beta_1$, $\beta_2$ and $K_{i0}$ would result in KNN-regression?  
+
+A: $\beta_1 = \beta_2 = 0$ and $K_{i0} = 1$ would result in KNN-regression,
+since then $\hat{\beta}_0 = \frac{1}{k} \sum_{i \in \mathcal{N}_0} y_i$ is the
+estimate of `logprice` in $x_0$ ($\mathcal{N}_0$ is the $k$-neighborhood of 
+$x_0$).
   
-  **Q4:** Describe how you can perform model selection in regression with AIC as criterion.  
+**Q4:** Describe how you can perform model selection in regression with AIC as criterion.  
+
+A: AIC is a criterion for (linear) model selection that penalizes the training error
+according to how complex the model is; 
+$AIC = \frac{1}{n\hat{\sigma}^2}(RSS + 2d\hat{\sigma}^2)$, where d is the number
+of predictors in the model. We could fit all possible models from subsets of the 
+predictors we consider. However, if we have a large number of predictors (and
+possibly functions of them), this could be computationally intractable, and it
+could lead to overfitting since we by chance could get a very good score for some
+models. Alternatively we could use stepwise selection. Then we start with either
+all predictors in the model and remove the one increasing AIC the most until we
+we can't remove any more, or go the other way, or do a mix (at each step either
+add or remove a predictor based on AIC).
+
 **Q5:** What are the main differences between using AIC for model selection and using cross-validation (with mean squared test error MSE)?  
-  **Q6:** See the code below for performing model selection with `bestglm()` based on AIC. What kind of contrast is used to represent `cut`, `color` and `clarity`? Write down the final best model and explain what you can interpret from the model.  
+
+A: AIC estimates the test error by penalizing the training error. With
+cross-validation we divide the data into $k$, say $k=5$, parts, then train (fit) on all
+but one and predict on the one left out of training (the validation set). Then
+we repeat this four more times, leaving each part out of training once. Thus we
+get a more direct estimate of the test error. And we get several estimates for
+the same model, giving an estimate of the variance of our estimated test error.
+The estimated test error is biased; it generally overestimates the test error, 
+since we don't train on all the data. Cross-validation for model selection is
+computationally expensive (we have to fit each model several times). However, it
+makes fewer (no) assumptions about the true underlying model, and we don't have
+to pinpoint the number of degrees of freedom of the model (which can be hard for
+other models than standard linear models).
+
+**Q6:** See the code below for performing model selection with `bestglm()` based on AIC. What kind of contrast is used to represent `cut`, `color` and `clarity`? Write down the final best model and explain what you can interpret from the model.
+
+A: The code below performs model selection with `bestglm()` based on AIC. The 
+categorical variables are coded such that one value is the reference category 
+(here: Fair for `cut`, D for `color`, I1 for `clarity`)
+and the rest are understood relative to this reference category. I.e. if `cut`
+is Fair, we "do nothing", but if `cut` is Good, we add the coefficient estimate
+for cutGood to our estimate of `logprice`. The best model is
+
+$$
+\begin{aligned}
+\texttt{logprice} &\approx 2.99 + 1.58 \texttt{logcarat} + 0.0286
+I(\texttt{cut} = Good) + 0.0405 I(\texttt{cut} = VeryGood) \\
+& \quad + 0.0430 I(\texttt{cut} = Premium) + 0.0548 I(\texttt{cut} = Ideal) 
+- 0.0218 I(\texttt{color} = E) \\
+& \quad - 0.0389 I(\texttt{color} = F) - 0.0680 I(\texttt{color} = G) 
+- 0.113 I(\texttt{color} = H) - 0.165 I(\texttt{color} = I) \\
+& \quad - 0.224 I(\texttt{color} = J) + 0.175 I(\texttt{clarity} = SI2) 
++ 0.252 I(\texttt{clarity} = SI1) \\
+& \quad + 0.316 I(\texttt{clarity} = VS2) + 0.346 I(\texttt{clarity} = VS1) 
++ 0.403 I(\texttt{clarity} = VVS2) \\
+& \quad + 0.433 I(\texttt{clarity} = VVS1) + 0.474 I(\texttt{clarity} = IF) + 0.0693 \texttt{xx}
+\end{aligned}
+$$
+
+The predictors included in the final model are `logcaract`, `cut`, `color`, 
+`clarity` and `xx`. They are all significant (with any reasonable level), and so
+is the model. The model explains 98.15\% of the variance in the data. The
+coeffients all have the sign and order as expected, e.g. better clarity gives
+a higher estimate of `logprice`.
+
 **Q7:** Calculate and report the MSE of the test set using the best model (on the scale of `logprice`).  
 
-```{r,eval=FALSE}
-library(bestglm)
+A: We also calculate and print the MSE of the test set using the best model in the
+following code, on the scale of `logprice`.
+
+```{r,eval=TRUE}
 ds=as.data.frame(within(dtrain,{
   y=logprice    # setting reponse
   logprice=NULL # not include as covariate
   price=NULL    # not include as covariate
   carat=NULL    # not include as covariate
 }))
+
 fit=bestglm(Xy=ds, IC="AIC")$BestModel
 summary(fit)
+
+ds_test=as.data.frame(within(dtest,{
+  y=logprice    # setting reponse
+  logprice=NULL # not include as covariate
+  price=NULL    # not include as covariate
+  carat=NULL    # not include as covariate
+}))
+
+preds = predict(fit, dplyr::select(ds_test, -y))
+mse = mean((preds - ds_test$y)^2)
+print(paste("MSE:", mse))
 ```
 
 **Q8:** Build a model matrix for the covariates `~logcarat+cut+clarity+color+depth+table+xx+yy+zz-1`. What is the dimension of this matrix?  
-  **Q9:** Fit a lasso regression to the diamond data with `logprice` as the response and the model matrix given in Q8. How did you find the value to be used for the regularization parameter?  
-  **Q10:** Calculate and report the MSE of the test set (on the scale of `logprice`).  
+
+A: In the following code we build a model matrix for the covariates
+`~logcarat+cut+clarity+color+depth+table+xx+yy+zz-1`. The dimension of the
+matrix is $5000 \times 24$; one column for each of `logcarat`, `depth`, `table`, `xx`,
+`yy` and `zz`, five columns for `cut`, six for `color` 
+and seven for `clarity`. The reason that we have five columns for `cut` and not
+four, is that we have not included an intercept. Usually the reference level
+for the categorical variables are captured by the intercept; now they will be
+captured by the `cut` covariate instead.
+
+
+```{r}
+x_train = model.matrix(y ~ . -1, ds)
+colnames(x_train)
+x_test = model.matrix(y ~ . -1, ds_test)
+```
+
+
+**Q9:** Fit a lasso regression to the diamond data with `logprice` as the response and the model matrix given in Q8. How did you find the value to be used for the regularization parameter?  
+
+A: In the following code we fit a lasso regression to the diamond data with
+`logprice`as the response and the model matrix given in Q8. We use 
+cross-validation (with `cv.glmnet`) to find the best value for the 
+regularization parameter $\lambda$. We could use the one minizing average 
+validation MSE over the folds. Another value we can choose the one resulting in
+the simplest model that has error within one standard error of the estimated error
+from the best model. We choose the latter, since the using the former might lead
+to overfitting, and since in general simpler models are preffered when all else
+is almost equal. The value is printed below. 
+
+```{r}
+set.seed(1)
+cv = cv.glmnet(x_train, ds$y, alpha=1)  # alpha=1 for lasso
+plot(cv)
+print(paste("Lambda value:", cv$lambda.1se))
+coef(cv)
+
+```
+
+
+**Q10:** Calculate and report the MSE of the test set (on the scale of `logprice`).  
+
+A: The MSE of the model predictions on the test set is calculated and printed
+below. It is somewhat higher than the error we obtained using `bestglm()` 
+before.
+
+```{r}
+preds_lasso = predict(cv, x_test)
+mse_lasso = mean((preds_lasso - ds_test$y)^2)
+print(paste("MSE:", mse_lasso))
+```
+
 
 **Q11:** A regression tree to model is built using a _greedy_ approach. What does that mean? Explain the strategy used for constructing a regression tree.  
-**Q12:** Is a regression tree a suitable method to handle both numerical and categorical covariates? Elaborate.  
+
+A: Building a regression tree in a _greedy_ manner means choosing the splitting
+criterion that splits the data most successfully (by some criterion) at each step.
+This might not result in the best possible tree overall. The complete algorithm:
+Split recursively (like described) until some stop criterion is fullfilled (e.g.
+number of samples per leaf node). If we want a smaller tree (avoid overfitting,
+better interpretability), we can do some pruning. Then, for prediction, follow 
+the tree all the way from root to the leaf nodes, and then use
+the training exemplars at that leaf node to predict the value. Typically by
+taking the mean.
+
+**Q12:** Is a regression tree a suitable method to handle both numerical and categorical covariates? Elaborate.
+
+A: Regression trees can handle both numerical and categorical covariates. At
+splits we can consider splitting by category(/ies) or by some threshold for
+numerical variables - a criterion can be e.g. $x_i < 50$. To not get an infinite
+number of possible splits to consider, we can e.g. test the numerical variables
+over a grid.
+
 **Q13:** Fit a (full) regression tree to the diamond data with `logprice` as the response (and the same covariates as for c and d), and plot the result. Comment briefly on you findings.  
+
+A: We fit a full regression tree to the diamond data with `logprice` as the
+response and the same covariates as before, i.e. those in `ds`, and plot the
+result in the code below.
+
+```{r}
+reg_tree = tree(y ~ ., ds)
+plot(reg_tree, type="proportional")
+text(reg_tree)
+```
+
+The dataset is first split by $\texttt{yy} < 5.665$. So if $\texttt{yy} < 5.665$ 
+we go left, else right. Most of the reduction in impurity happens at the first step. 
+More different values of logprice amongst exemplars means higher impurity,
+measured by RSS in this case.
+The tree is compact and easy to interpret. The tree only uses two of the
+variables, `yy` and `xx`, which is interesting.
+
 **Q14:** Calculate and report the MSE of the test set (on the scale of `logprice`).  
 
-**Q15:** Explain the motivation behind bagging, and how bagging differs from random forest? What is the role of bootstrapping?  
-  **Q16:** What are the parameter(s) to be set in random forest, and what are the rules for setting these?  
-  **Q17:** Boosting is a popular method. What is the main difference between random forest and boosting?  
-  **Q18:** Fit a random forest to the diamond data with `logprice` as the response (and the same covariates as before). Comment on your choice of parameter (as decribed in Q16).   
+A: The MSE of the predictions by the regression tree fited in Q13 is calculated
+below. The score is not very impressive compared to the previous models, which
+is not surprising considering the tree (`yy` obviously tells us a lot about the
+price, but we would have known by now if using almost only `yy` to predict the
+price was a good way to go).
+
+```{r}
+preds_reg_tree = predict(reg_tree, dplyr::select(ds_test, -y))
+mse_reg_tree = mean((preds_reg_tree - ds_test$y)^2)
+print(paste("MSE:", mse_reg_tree))
+```
+
+**Q15:** Explain the motivation behind bagging, and how bagging differs from random forest? What is the role of bootstrapping?
+
+A: Regression trees can be very sensitive to small changes in the data. E.g. if the
+first split is different when the data is changed a little, we migth well not 
+get any of the same rules for splitting into different regions. In other words:
+Regression tree models have a high variance. 
+
+To reduce the variance we would like to fit trees from different samples and
+combine them (e.g. by taking the mean of predictions). Unfortunately we only
+have one sample. What we can do is to estimate the true distribution by the
+empirical distribution, and take boostrap samples to get several trees.
+
+These "bootstrap trees" might still be quite similar, especially if there is one 
+very strong predictor, so that the variance won't be reduced very much. Thus an idea 
+is to just consider a random subset of the  covariates at each split, to get
+more different trees. This is exactly what is done with random forests. 
+The size of the subsets should be dependent on how dependent the covariates are 
+on each other. For our data the covariates are probably
+highly correlated, especially `carat`, `depth`, `table`,
+`xx`, `yy` and `yy` (they are definitely dependent on each
+other).
+
+**Q16:** What are the parameter(s) to be set in random forest, and what are the rules for setting these?  
+
+A: Other than the parameter $m$ for the size of the random subset to be considered
+at each split (typically $p/3$ for regression), we need to choose the number of
+trees $B$, which should be large enough for the forest to stabilize. There are
+other parameters one can consider, like `nodesize` and `maxnodes`,
+but we let these have the default values.
+  
+**Q17:** Boosting is a popular method. What is the main difference between random forest and boosting?  
+
+A: Boosting works a little differently from bagging and random forests. First a
+regression (we only discuss regression here) tree is fit with $d$ splits, $d$
+typically not beeing very large (can be 1). Then we fit a new tree, say 
+$\hat{f}^b(x)$, and a shrunken version $\lambda \hat{f}^b(x)$ (
+$0 < \lambda < 1$, typically 0.1 or 0.01) is added to the previous model. Then
+we repeat this procedure until satisfied. Now we need to take care when deciding
+how many trees $B$ to fit, because with this method we can easily overfit the
+training data.
+
+**Q18:** Fit a random forest to the diamond data with `logprice` as the response (and the same covariates as before). Comment on your choice of parameter (as decribed in Q16). 
+
+A: In the following code we fit a random forest to the diamond data with 
+`logprice` as the response. There are 9 covariates, so we choose $m = 9/3 = 3$, 
+and we make a guess that 500 trees should be sufficient.
+
+```{r}
+set.seed(1)
+rf = randomForest(y ~ ., ds, mtry=3, ntree=500, importance=T)
+```
+
+
 **Q19:** Make a variable importance plot and comment on the plot. Calculate and report the MSE of the test set (on the scale of `logprice`).  
 
+A: Below we make a variable importance plot from the random forest. The left
+plot shows how much, averaged over all the trees, the prediction error on the
+out-of-bag sample (exemplars not in the bootstrap sample) increases when the
+values for the covariates are permuted. The right plot represents how much
+impurity decreases in total
+(averaged over all trees) for each of the variables. 
+
+Somewhat surprisingly, the plots seem to disagree. One possible explanation is
+that for the first node(s) `logcarat`, `xx`. `yy` and `zz` work very well for 
+splitting the training data, so they are often chosen (when they are in the 
+random subset considered at the split). But in the end, especially `clarity` 
+and `color` are better predictors. 
+
+Most likely a combination is needed to really get good predictions; a big
+diamond which is not pretty is not worth a fortune, neither is a perfectly
+looking tiny one. This claim is backed up by the fact that our random forest,
+which is our only model capturing interactions between the more different 
+covariates, is the best model at predicting the test
+set. The decision tree only captures  interactions between `xx` and `yy`, and the 
+previous models don't consider interactions. See the random forest MSE printed 
+below. 
+
+```{r}
+varImpPlot(rf)
+preds_rf = predict(rf, dplyr::select(ds_test, -y))
+mse_rf = mean((preds_rf - ds_test$y)^2)
+print(paste("MSE:", mse_rf))
+```
+
+
 **Q20:** Finally, compare the results from c (subset selection), d (lasso), e (tree) and f (random forest): Which method has given the best performance on the test set and which method has given you the best insight into the relationship between the price and the covariates?
+
+A: As discussed in Q19, the random forest performs best when it comes to 
+predicting the test set. This is most likely do to its ability to capture
+interactions that none of the other models do (see Q19), and that it can do so
+without overfitting the training data.
+
+We saw the importance of especially `clarity` already with the subset selection
+and lasso-models, together with the "size-dependent" covariates. The tree
+didn't really tell us much, other than that splitting the diamonds into
+different sizes (`yy`) is an easy way to make predictions that are not very 
+good. The random forest shows the importance of interactions, which makes sense
+intuitively (see Q19).
   
+<<<<<<< HEAD
   
   # Problem 2: Unsupervised learning [3 points]
   
   **Q21:** What is the definition of a principal component score, and how is the score related to the eigenvectors of the matrix ${\hat {\bf R}}$. 
+=======
+# Problem 2: Unsupervised learning [3 points]
+
+**Q21:** What is the definition of a principal component score, and how is the score related to the eigenvectors of the matrix ${\hat {\bf R}}$. 
+
+**Q22:** Explain what is given in the plot with title "First eigenvector". Why are there only $n=64$ eigenvectors and $n=64$ principal component scores?
+>>>>>>> Solve problem 1
   
   The data is given in the matrix $\matr{X}$, of size $n \times p$, where the columns are points in space. The columns are then scaled and shifted to mean $0$ and variance $1$, and we then have a standardized version of the observations $\matr{Z}$, of size $n \times p$. From this standardized matrix we can estimate the gene-standardized covariance matrix $\matr{\hat{R}}$ of size $p \times p$ by the equation 
   $$
@@ -189,6 +554,10 @@ legend("bottomright",legend = colsvsnames[,2],cex=0.55,col=cols,pch = pch.vec)
 
 
 **Q25:**: Explain what it means to use Euclidean distance and average linkage for hierarchical clustering. 
+<<<<<<< HEAD
+=======
+Euclidean distance is the distance between points in a space of two or three dimensions. The average linkage is the mean intercluster dissimiliarity. Which means that we use the average dissimiliarty between pairs of clusters. <span style="color:red">Mangler forklaring på hvordan clustere bygges (greedy måte, slår sammen clustere som øker average linkage minst)</span>
+>>>>>>> Solve problem 1
 
 We first look at the average linkage. The algorithm for hierarchical clustering is given by
 
@@ -309,8 +678,12 @@ train_df %>%
   geom_boxplot() + 
   facet_wrap(~diabetes)
 ```
+<<<<<<< HEAD
 The next plot provides further insight into the importance of $\textrm{glu}$ and $\textrm{skin}$. There's a clear structure in the plot below, showing that the fraction of people with diabetes increases as the values of $\textrm{skin}$ and $\textrm{glu}$ increase.
 There's 
+=======
+The next plot provides further insight into the importance of $\textrm{glu}$ and $\textrm{skin}$. There's a clear structure in the plot below, showing that the fraction of people with diabetes increases drastically as the values of $\textrm{skin}$ and $\textrm{glu}$ increase. <span style="color:red">geom_jitter legger på randomness, kanskje heller bruke geom_points?</span>
+>>>>>>> Solve problem 1
 
 ```{r}
 train_df %>%
@@ -846,4 +1219,8 @@ history %>% plot() + xlim(0, length(history$metrics$acc))
 
 **Q30:** Conclude with choosing a winning method, and explain why you mean that this is the winning method.
 
+<<<<<<< HEAD
 Logistic regression achieves the highest accuracy and the highest AUC. The other methods are not far behind, but has additional disadvantages that make them less attractive. Logistic regression is fairly easy to interpret due to relation between the success probability and the values of the covariates. The random forest is harder to interpret due to the high number of trees that are involved. The random nature of the random forest is also a downside. The support vector classifier is very easy to interpret for $p = 2$ and $p = 3$, but becomes harder to both visualize and explain for high-dimensional data. Neural networks are notoriously hard to interpret due to it's very complex structure. This, in combination with it's inability to reliably perform better than the logistic regression, makes it less desirable than the logistic regression in this case. When taking all of this into account we're led to choose the logistic regression as the best model for this particular problem. 
+=======
+**Q30:** Conclude with choosing a winning method, and explain why you mean that this is the winning method.
+>>>>>>> Solve problem 1
