@@ -4,10 +4,10 @@ author: "NN1, NN2 and NN3"
 date: "`r format(Sys.time(), '%d %B, %Y')`"
 subtitle: TMA4268 Statistical Learning V2019
 output:
+  html_document: default
   pdf_document:
     latex_engine: xelatex
     keep_tex: true
-  html_document: default
 header-includes:
   - \newcommand{\matr}[1]{\boldsymbol{#1}}
   - \usepackage{bm}
@@ -62,7 +62,6 @@ dtest=as_tibble(all$dtest)
 
 **Q1**: Would you choose `price` or `logprice` as response variable? Justify your choice. Next, plot your choice of response pairwise with `carat`, `logcarat`, `color`, `clarity` and `cut`. Comment.
 
-A:
 To determine if we should use `price` or `logprice` as response variable we would
 like to fit a model an then assess our assumptions. This can be e.g. iid Gaussian
 residuals for the standard linear model. But we are going to fit different models
@@ -75,7 +74,6 @@ linear function of the covariates than `price`, we choose to work with
 ```{r}
 lm_price = lm(price ~ . -logprice -logcarat, dtrain)
 lm_logprice = lm(logprice ~ . -price -carat, dtrain)
-
 # Code adapted from Module 3 example
 ggplot(lm_price, aes(.fitted, .stdresid)) + 
   geom_point(pch = 21) + 
@@ -84,7 +82,6 @@ ggplot(lm_price, aes(.fitted, .stdresid)) +
   labs(x = "Fitted values", y = "Standardized residuals", 
        title = "Fitted values vs standardized residuals", 
        subtitle = deparse(lm_price$call))
-
 ggplot(lm_logprice, aes(.fitted, .stdresid)) + 
   geom_point(pch = 21) + 
   geom_hline(yintercept = 0, linetype = "dashed") + 
@@ -119,7 +116,7 @@ Use the local regression model
 $\texttt{logprice} = \beta_0 + \beta_1 \texttt{carat}+ \beta_2 \texttt{carat}^2$
 weighted by the tricube kernel $K_{i0}$. 
 
-A: We use the local regression model $\texttt{logprice} = \beta_0 + \beta_1 
+We use the local regression model $\texttt{logprice} = \beta_0 + \beta_1 
 \texttt{carat} + \beta_2 \texttt{carat}^2$ weighted by the tricube kernel
 
 $$
@@ -139,21 +136,21 @@ tibble(carat=dtrain$carat, logprice=dtrain$logprice, fitted=fit_lr$fitted) %>%
 
 **Q2:** What is the predicted price of a diamond weighting 1 carat. Use the closest 20% of the observations.
 
-A: The predicted logprice of a diamond weighing 1 carat is 
+The predicted logprice of a diamond weighing 1 carat is 
 `r predict(fit_lr, 1)`. The standard error is 
 `r predict(fit_lr, 1, se=T)$se.fit`. The predicted price is 
 `r 10**predict(fit_lr, 1)`.
 
 **Q3:** What choice of $\beta_1$, $\beta_2$ and $K_{i0}$ would result in KNN-regression?  
 
-A: $\beta_1 = \beta_2 = 0$ and $K_{i0} = 1$ would result in KNN-regression,
+$\beta_1 = \beta_2 = 0$ and $K_{i0} = 1$ would result in KNN-regression,
 since then $\hat{\beta}_0 = \frac{1}{k} \sum_{i \in \mathcal{N}_0} y_i$ is the
 estimate of `logprice` in $x_0$ ($\mathcal{N}_0$ is the $k$-neighborhood of 
 $x_0$).
   
 **Q4:** Describe how you can perform model selection in regression with AIC as criterion.  
 
-A: AIC is a criterion for (linear) model selection that penalizes the training error
+AIC is a criterion for (linear) model selection that penalizes the training error
 according to how complex the model is; 
 $AIC = \frac{1}{n\hat{\sigma}^2}(RSS + 2d\hat{\sigma}^2)$, where d is the number
 of predictors in the model. We could fit all possible models from subsets of the 
@@ -167,7 +164,7 @@ add or remove a predictor based on AIC).
 
 **Q5:** What are the main differences between using AIC for model selection and using cross-validation (with mean squared test error MSE)?  
 
-A: AIC estimates the test error by penalizing the training error. With
+AIC estimates the test error by penalizing the training error. With
 cross-validation we divide the data into $k$, say $k=5$, parts, then train (fit) on all
 but one and predict on the one left out of training (the validation set). Then
 we repeat this four more times, leaving each part out of training once. Thus we
@@ -182,7 +179,7 @@ other models than standard linear models).
 
 **Q6:** See the code below for performing model selection with `bestglm()` based on AIC. What kind of contrast is used to represent `cut`, `color` and `clarity`? Write down the final best model and explain what you can interpret from the model.
 
-A: The code below performs model selection with `bestglm()` based on AIC. The 
+The code below performs model selection with `bestglm()` based on AIC. The 
 categorical variables are coded such that one value is the reference category 
 (here: Fair for `cut`, D for `color`, I1 for `clarity`)
 and the rest are understood relative to this reference category. I.e. if `cut`
@@ -213,7 +210,7 @@ a higher estimate of `logprice`.
 
 **Q7:** Calculate and report the MSE of the test set using the best model (on the scale of `logprice`).  
 
-A: We also calculate and print the MSE of the test set using the best model in the
+We also calculate and print the MSE of the test set using the best model in the
 following code, on the scale of `logprice`.
 
 ```{r,eval=TRUE}
@@ -241,7 +238,7 @@ print(paste("MSE:", mse))
 
 **Q8:** Build a model matrix for the covariates `~logcarat+cut+clarity+color+depth+table+xx+yy+zz-1`. What is the dimension of this matrix?  
 
-A: In the following code we build a model matrix for the covariates
+In the following code we build a model matrix for the covariates
 `~logcarat+cut+clarity+color+depth+table+xx+yy+zz-1`. The dimension of the
 matrix is $5000 \times 24$; one column for each of `logcarat`, `depth`, `table`, `xx`,
 `yy` and `zz`, five columns for `cut`, six for `color` 
@@ -260,7 +257,7 @@ x_test = model.matrix(y ~ . -1, ds_test)
 
 **Q9:** Fit a lasso regression to the diamond data with `logprice` as the response and the model matrix given in Q8. How did you find the value to be used for the regularization parameter?  
 
-A: In the following code we fit a lasso regression to the diamond data with
+In the following code we fit a lasso regression to the diamond data with
 `logprice`as the response and the model matrix given in Q8. We use 
 cross-validation (with `cv.glmnet`) to find the best value for the 
 regularization parameter $\lambda$. We could use the one minizing average 
@@ -282,7 +279,7 @@ coef(cv)
 
 **Q10:** Calculate and report the MSE of the test set (on the scale of `logprice`).  
 
-A: The MSE of the model predictions on the test set is calculated and printed
+The MSE of the model predictions on the test set is calculated and printed
 below. It is somewhat higher than the error we obtained using `bestglm()` 
 before.
 
@@ -295,7 +292,7 @@ print(paste("MSE:", mse_lasso))
 
 **Q11:** A regression tree to model is built using a _greedy_ approach. What does that mean? Explain the strategy used for constructing a regression tree.  
 
-A: Building a regression tree in a _greedy_ manner means choosing the splitting
+Building a regression tree in a _greedy_ manner means choosing the splitting
 criterion that splits the data most successfully (by some criterion) at each step.
 This might not result in the best possible tree overall. The complete algorithm:
 Split recursively (like described) until some stop criterion is fullfilled (e.g.
@@ -307,7 +304,7 @@ taking the mean.
 
 **Q12:** Is a regression tree a suitable method to handle both numerical and categorical covariates? Elaborate.
 
-A: Regression trees can handle both numerical and categorical covariates. At
+Regression trees can handle both numerical and categorical covariates. At
 splits we can consider splitting by category(/ies) or by some threshold for
 numerical variables - a criterion can be e.g. $x_i < 50$. To not get an infinite
 number of possible splits to consider, we can e.g. test the numerical variables
@@ -315,7 +312,7 @@ over a grid.
 
 **Q13:** Fit a (full) regression tree to the diamond data with `logprice` as the response (and the same covariates as for c and d), and plot the result. Comment briefly on you findings.  
 
-A: We fit a full regression tree to the diamond data with `logprice` as the
+We fit a full regression tree to the diamond data with `logprice` as the
 response and the same covariates as before, i.e. those in `ds`, and plot the
 result in the code below.
 
@@ -334,7 +331,7 @@ variables, `yy` and `xx`, which is interesting.
 
 **Q14:** Calculate and report the MSE of the test set (on the scale of `logprice`).  
 
-A: The MSE of the predictions by the regression tree fited in Q13 is calculated
+The MSE of the predictions by the regression tree fited in Q13 is calculated
 below. The score is not very impressive compared to the previous models, which
 is not surprising considering the tree (`yy` obviously tells us a lot about the
 price, but we would have known by now if using almost only `yy` to predict the
@@ -348,7 +345,7 @@ print(paste("MSE:", mse_reg_tree))
 
 **Q15:** Explain the motivation behind bagging, and how bagging differs from random forest? What is the role of bootstrapping?
 
-A: Regression trees can be very sensitive to small changes in the data. E.g. if the
+Regression trees can be very sensitive to small changes in the data. E.g. if the
 first split is different when the data is changed a little, we migth well not 
 get any of the same rules for splitting into different regions. In other words:
 Regression tree models have a high variance. 
@@ -370,7 +367,7 @@ other).
 
 **Q16:** What are the parameter(s) to be set in random forest, and what are the rules for setting these?  
 
-A: Other than the parameter $m$ for the size of the random subset to be considered
+Other than the parameter $m$ for the size of the random subset to be considered
 at each split (typically $p/3$ for regression), we need to choose the number of
 trees $B$, which should be large enough for the forest to stabilize. There are
 other parameters one can consider, like `nodesize` and `maxnodes`,
@@ -378,7 +375,7 @@ but we let these have the default values.
   
 **Q17:** Boosting is a popular method. What is the main difference between random forest and boosting?  
 
-A: Boosting works a little differently from bagging and random forests. First a
+Boosting works a little differently from bagging and random forests. First a
 regression (we only discuss regression here) tree is fit with $d$ splits, $d$
 typically not beeing very large (can be 1). Then we fit a new tree, say 
 $\hat{f}^b(x)$, and a shrunken version $\lambda \hat{f}^b(x)$ (
@@ -389,7 +386,7 @@ training data.
 
 **Q18:** Fit a random forest to the diamond data with `logprice` as the response (and the same covariates as before). Comment on your choice of parameter (as decribed in Q16). 
 
-A: In the following code we fit a random forest to the diamond data with 
+In the following code we fit a random forest to the diamond data with 
 `logprice` as the response. There are 9 covariates, so we choose $m = 9/3 = 3$, 
 and we make a guess that 500 trees should be sufficient.
 
@@ -401,7 +398,7 @@ rf = randomForest(y ~ ., ds, mtry=3, ntree=500, importance=T)
 
 **Q19:** Make a variable importance plot and comment on the plot. Calculate and report the MSE of the test set (on the scale of `logprice`).  
 
-A: Below we make a variable importance plot from the random forest. The left
+Below we make a variable importance plot from the random forest. The left
 plot shows how much, averaged over all the trees, the prediction error on the
 out-of-bag sample (exemplars not in the bootstrap sample) increases when the
 values for the covariates are permuted. The right plot represents how much
@@ -433,7 +430,7 @@ print(paste("MSE:", mse_rf))
 
 **Q20:** Finally, compare the results from c (subset selection), d (lasso), e (tree) and f (random forest): Which method has given the best performance on the test set and which method has given you the best insight into the relationship between the price and the covariates?
 
-A: As discussed in Q19, the random forest performs best when it comes to 
+As discussed in Q19, the random forest performs best when it comes to 
 predicting the test set. This is most likely do to its ability to capture
 interactions that none of the other models do (see Q19), and that it can do so
 without overfitting the training data.
@@ -449,27 +446,20 @@ intuitively (see Q19).
   
 **Q21:** What is the definition of a principal component score, and how is the score related to the eigenvectors of the matrix ${\hat {\bf R}}$. 
   
-  The data is given in the matrix $\matr{X}$, of size $n \times p$, where the columns are points in space. The columns are then scaled and shifted to mean $0$ and variance $1$, and we then have a standardized version of the observations $\matr{Z}$, of size $n \times p$. From this standardized matrix we can estimate the gene-standardized covariance matrix $\matr{\hat{R}}$ of size $p \times p$ by the equation 
-  $$
-  \matr{\hat{R}} = \frac{1}{n-1}\sum\limits_{i=1}^n(\matr{Z}_i- \matr{\bar{Z}})(\matr{Z}_i- \matr{\bar{Z}})^T.
-  $$
-  We now have a matrix of correlated variables and we want to turn it uncorrelated while keeping as much information about the data as possible. Doing this we get what is called \textit{principal component} of $\matr{\hat{R}}$ and we call it $\matr{Y}$, a $p \times M$ . This is calculated in the following way
-  
-$$
-\begin{array}{rcl}
-\matr{Y}_m & = &  \matr{\phi}_m \matr{\hat{R}}\\
-||\matr{\phi}_m||_2 & = & 1 
-\end{array}
-$$
-We can find the eigenvalues of $\matr{\hat{R}}$, and the eigenvalue decomposition is given by
-$$
-\matr{\hat{R}} = \matr{V} \matr{\Lambda} \matr{V}^{-1}
-$$
-where $\matr{V}$ holds its eigenvectors and $\matr{\Lambda}$ holds its eigenvalues on its diagonal. Then one can show that the $\matr{\phi}=\matr{V}$, which means that $\matr{\phi}$ is equal to the eigevectors of $\matr{\hat{R}}$. Which means that the \textit{principal compenent scores} is given by the new values that is transformed into the new space. The transformation is given by $\matr{Z}\matr{\phi} = \matr{Z} \matr{\phi}$.
+The idea of PCA (principal component analysis) is to use linear combinations of
+the covariate values to reduce the dimension while keeping as much information as
+possible. Specifically, information here means variability in the data. The first 
+PC is the linear combination with maximal variance ($Z_{i1} = \phi_1 \cdot X_i$,
+$i = 1, \dots, n$,
+and we require $||\phi_1||_2 < 1$). The second principal is the one orthogonal to
+the first maximizing variance (with $||\phi_2||_2 < 1$), and so on.
+
+It turns out $\phi_1$ is the eigenvector of the the correlation matrix of 
+$\matr{X}$ (or, equivalently, the covariance matrix of the standardized 
+covariate matrix) corresponding to the largest eigenvalue. The j-th principal
+component score of the i-th datapoint is $Z_{ij}$.
 
 **Q22:** Explain what is given in the plot with title "First eigenvector". Why are there only $n=64$ eigenvectors and $n=64$ principal component scores?
-
-In Figure \ref{fig:firsteigvec} we can see the first eigenvector in the matrix $\matr{V}$ or what we found was equal to $\matr{\phi}4$. It is the eigenvector of the matrix $\matr{\hat{R}}$. It shows how to linearly combine the $\matr{Z}$ into our new transformed space. It is the first \textit{principal component}, which is the component with the largest variance. To find the number of eigenvectors we need to know the rank of the matrix $\matr{\hat{R}}$, which is $\mathrm{rank}(\matr{\hat{R}}) = min(p,n-1) = (6830,64-1) = 63$. But the \texttt{prcomp} returns 64 eigenvalue elements, where the last element is for $\lambda = 0$, so $\matr{V}_{64} = \vect{0}$.
 
 ```{r, fig.cap = "\\label{fig:firsteigvec} First eigenvector."}
 library(ElemStatLearn)
@@ -493,9 +483,19 @@ pca=prcomp(Z)
 plot(1:dim(X)[2],pca$rotation[,1],type="l",xlab="genes",ylab="weight",main="First eigenvector")
 ```
 
+The plot with title "First eigenvector" shows the eigenvector corresponding to
+the largest eigenvalue of the empirical correlation matrix $\hat{R}$ of the data
+$X$. This is the same as the weights to get the first PC. Since there are $n=64$
+observations, the rank of the correlation matrix is (at most) $n-1=63$. So there
+are 63 non-zero eigenvalues with 63 corresponding eigenvectors and principal
+components. That prcomp returns 64 PC scores is just an implementational
+detail. The standard deviation of the 64th PC is `r pca$sdev[64]`; it explains
+none of the variability in the data. In fact, all the variability is explained
+by the 63 (first) PCs.
+
   **Q23:** How many principal components are needed to explain 80% of the total variance in ${\bf Z}$? Why is `sum(pca$sdev^2)=p`?  
   
-  By the transformation the fraction of the variance is found by the equation
+  The fraction of the variance is found by the equation
   
 $$
 R^2 =\frac{\sum_{i=1}^M \lambda_i}{\sum_{j=1}^p \lambda_j}  
@@ -512,6 +512,7 @@ for (i in seq(1,length(quotient_variance))){
 }
 ```
 
+<<<<<<< HEAD
 To find at which number of \textit{principal components}, they explain $80\%$ of to total variance we need to write some code to calculate it. This is done in the code above. The result of which is $`r res_i`$. 
 The reason `sum(pca$sdev^2)=p` is because of our scaling. The variance has been scaled to $1$ and therefore by the $\sum_{i=1}^p 1 = p$.
 
@@ -519,9 +520,17 @@ The reason `sum(pca$sdev^2)=p` is because of our scaling. The variance has been 
   **Q24**: Study the PC1 vs PC2 plot, and comment on the groupings observed. What can you say about the placement of the `K262`, `MCF7` and `UNKNOWN` samples? Produce the same plot for two other pairs of PCs and comment on your observations.
 
 In Figure \ref{fig:pc1pc2} we see the first \textit{principal component} on the x-axis versus the second \textit{principal component} on the y-axis. The `K562` cells, that we know are part of the `LEUKEMIA` familiy, is clustered with exactly these cells for both versions \textit{A} and \textit{B}. `MCF7` cells is part of the `BREAST` cancer famility. In the figure it is clusterted together with one of these cells, but also together with `COLON`Cells. The `BREAST`cancer cells doesn't really have any clustered effects in this plot, but the `COLON`cells are very clustered in the top right corner. In the top left corner there is a big cluster of many different cancer cells, `NSCLC`, `OVARIAN` and `RENAL` in particular. And within this cluster the `UNKNOWN`cells is placed. Which means that we can't really give a clear indication of which cancer familiy the `UNKNOWN` cells are part of. 
+=======
+In he code above we find the number of principal components needed to explain 80% of the total variance. The result is `r res_i``. 
+The reason `sum(pca$sdev^2)=p` is because of our scaling. All principal components explain all the variance (so the total variance is $p$) and the variances have been scaled to 1. 
 
-We plotted the `PC32` vs. `PC33` in Figure \ref{fig:pc32pc33} for when the \textit{principal components} explain $80\%$ of the variance. We also plotted the `PC63` vs. `PC64` for when the variance is as small as possible and when the null vector to transform the principal component is used. 
-In these plots we can't see any significant clustering, that would classifiy the cancer cells in any perticular way. 
+  **Q24**: Study the PC1 vs PC2 plot, and comment on the groupings observed. What can you say about the placement of the `K262`, `MCF7` and `UNKNOWN` samples? Produce the same plot for two other pairs of PCs and comment on your observations.
+
+In Figure \ref{fig:pc1pc2} we see the first \textit{principal component} on the x-axis versus the second \textit{principal component} on the y-axis. The `K562` cells, that we know are part of the `LEUKEMIA` familiy, are clustered with exactly these cells for both versions \textit{A} and \textit{B}. `MCF7` cells are part of the `BREAST` cancer familiy. In the figure it is clusterted together with one of these cells, but also together with `COLON` cells. The `BREAST` cancer cells don't really have any clustered effects in this plot, but the `COLON` cells are very clustered in the top right corner. In the top left corner there is a big cluster of many different cancer cells, `NSCLC`, `OVARIAN` and `RENAL` in particular. And within this cluster the `UNKnOWN` cells are placed. Which means that we can't really give a clear conclusion of which cancer familiy the `UNKNOWN` cells are part of. 
+>>>>>>> Fix errors
+
+We plott the `PC32` vs. `PC33` in Figure \ref{fig:pc32pc33} for when the \textit{principal components} explain $80\%$ of the variance. We also plott the `PC63` vs. `PC64` for when the variance is as small as possible and when the null vector to transform the principal component is used. 
+In these plots we can't see any significant clustering, that would classifiy the cancer cells in any particular way. 
 
 ```{r, fig.cap = "\\label{fig:pc1pc2} PC1 vs. PC2"}
 plot(pca$x[,1],pca$x[,2],xlab="PC1",ylab="PC2",pch=pchsamples,col=colsamples)
