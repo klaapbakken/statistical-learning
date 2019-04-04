@@ -1,18 +1,19 @@
 ---
-title: 'Compulsory exercise 2: Group XYZ'
-author: "NN1, NN2 and NN3"
+title: 'Compulsory exercise 2: Group 26'
+author: "Øyvind Klåpbakken, Sindre Henriksen and Martin Outzen Berild"
 date: "`r format(Sys.time(), '%d %B, %Y')`"
-subtitle: TMA4268 Statistical Learning V2019
 output:
-  html_document: default
   pdf_document:
+    keep_tex: yes
     latex_engine: xelatex
-    keep_tex: true
+  word_document: default
+  html_document: default
+subtitle: TMA4268 Statistical Learning V2019
 header-includes:
-  - \newcommand{\matr}[1]{\boldsymbol{#1}}
-  - \usepackage{bm}
-  - \usepackage[a]{esvect}
-  - \newcommand{\vect}[1]{\vv{\bm{#1}}}
+- \newcommand{\matr}[1]{\boldsymbol{#1}}
+- \usepackage{bm}
+- \usepackage[a]{esvect}
+- \newcommand{\vect}[1]{\vv{\bm{#1}}}
 ---
   
 ```{r setup, include=FALSE}
@@ -489,7 +490,7 @@ $X$. This is the same as the weights to get the first PC. Since there are $n=64$
 observations, the rank of the correlation matrix is (at most) $n-1=63$. So there
 are 63 non-zero eigenvalues with 63 corresponding eigenvectors and principal
 components. That prcomp returns 64 PC scores is just an implementational
-detail. The standard deviation of the 64th PC is `r pca$sdev[64]`; it explains
+detail. The standard deviation of the 64th PC is $`r pca$sdev[64]`$; it explains
 none of the variability in the data. In fact, all the variability is explained
 by the 63 (first) PCs.
 
@@ -519,7 +520,7 @@ The reason `sum(pca$sdev^2)=p` is because of our scaling. All principal componen
 
 In Figure \ref{fig:pc1pc2} we see the first \textit{principal component} on the x-axis versus the second \textit{principal component} on the y-axis. The `K562` cells, that we know are part of the `LEUKEMIA` familiy, are clustered with exactly these cells for both versions \textit{A} and \textit{B}. `MCF7` cells are part of the `BREAST` cancer familiy. In the figure it is clusterted together with one of these cells, but also together with `COLON` cells. The `BREAST` cancer cells don't really have any clustered effects in this plot, but the `COLON` cells are very clustered in the top right corner. In the top left corner there is a big cluster of many different cancer cells, `NSCLC`, `OVARIAN` and `RENAL` in particular. And within this cluster the `UNKnOWN` cells are placed. Which means that we can't really give a clear conclusion of which cancer familiy the `UNKNOWN` cells are part of. 
 
-We plott the `PC32` vs. `PC33` in Figure \ref{fig:pc32pc33} for when the \textit{principal components} explain $80\%$ of the variance. We also plott the `PC63` vs. `PC64` for when the variance is as small as possible and when the null vector to transform the principal component is used. 
+We plot the `PC32` vs. `PC33` in Figure \ref{fig:pc32pc33} for when the \textit{principal components} explain $80\%$ of the variance. We also plott the `PC63` vs. `PC64` for when the variance is as small as possible and when the null vector to transform the principal component is used. 
 In these plots we can't see any significant clustering, that would classifiy the cancer cells in any particular way. 
 
 ```{r, fig.cap = "\\label{fig:pc1pc2} PC1 vs. PC2"}
@@ -550,7 +551,7 @@ We first look at the average linkage. The algorithm for hierarchical clustering 
 \begin{enumerate}
 \item Find two clusters that are the least dissimilar
 \item Create new cluster of these
-\item Remove remove previous cluster
+\item Remove previous cluster
 \item \texttt{End do;}
 \end{enumerate}
 \end{enumerate}
@@ -559,11 +560,11 @@ In this algoritm we see that we need some kind of dissimiliarity measure, and in
 $$
 L(l,r) = \frac{1}{n_l n_r}\sum\limits_{i = 1}^{n_l}\sum\limits_{j=1}^{n_r}||\vect{x}_{li}-\vect{x}_{rj}||_2 .
 $$
-Where $l$ is the set of points in one cluster and $r$ is the set of points in the second cluster. The dissimilarity calculation inside the $||\cdot||_2$ is in our case the Euclidean distance. This is to capture the physical distance between two points in the space. Within a cluster one wants to minimize the variance between the observations to find the best possible cluster for each observation. This is done by the following equation, also using the Euclidean distance as a dissimilarity measure, 
+Where $l$ is the set of points in one cluster and $r$ is the set of points in the second cluster. The dissimilarity calculation done by $||\cdot||_2$ is the Euclidean distance between the two points. This is used to capture the distance between two points in the space. Within a cluster one wants to minimize the variance between the observations to find the best possible cluster for each observation. This is done by the following equation, also using the Euclidean distance as a dissimilarity measure, 
 $$
  L(C_k) = \frac{1}{n_{C_k}} \sum\limits_{i,j\in C_k} \sum\limits_{p=1}^P ||x_{ip}-x_{jp}||_2^2.
 $$
-with $n_{C_k}$ being the number of points in cluster number $k$, with the points having dimension $P$. The Euclidean distance is given by $||x_1- x_2||_2 = \sqrt{(x_1^2 + x_2^2)}$. Using this on the scaled observations $\matr{Z}$, one would end up with the partition shown in Figure \ref{fig:dendogram}.
+with $n_{C_k}$ being the number of points in cluster number $k$, with the points having dimension $P$. The Euclidean distance is given by $||\vect{x}- \vect{y}||_2 = \sqrt{((x_1 - y_1)^2 + (x_2 - y_2)^2)}$. Using this on the scaled observations $\matr{Z}$, one would end up with the partition shown in Figure \ref{fig:dendogram}.
 
 **Q26:**: Perform hierarchical clustering with Euclidean distance and average linkage on the scaled gene expression in `Z`. Observe where our samples labelled as `K562`, `MCF7` and `UNKNOWN` are placed in the dendrogram. Which conclusions can you draw from this?
 ```{r, fig.cap = "\\label{fig:dendogram} Dendogram of hierarchical clustering with euclidean distance and average linkage on $\\matr{Z}$"}
@@ -571,52 +572,61 @@ library(ggplot2)
 library(ggdendro)
 library(tidyverse)
 library(dendextend)
-hc.average=hclust(dist(Z), method="ave")
+hc.average <- hclust(dist(Z), method = "ave")
 str(hc.average)
-dhc <- as.dendrogram(hc.average,hang=FALSE,dLeaf = NULL)
+dhc <- as.dendrogram(hc.average, hang = FALSE, dLeaf = NULL)
 ddata <- dendro_data(dhc, type = "rectangle")
-tmpx = round(segment(ddata)$xend)
-tmpy = segment(ddata)$yend
-res = numeric(length = length(label(ddata)$x))+300
-for (i in seq(1,length(tmpx))){
-  if (res[tmpx[i]]>tmpy[i]){
-     res[tmpx[i]] = tmpy[i]
+tmpx <- round(segment(ddata)$xend)
+tmpy <- segment(ddata)$yend
+res <- numeric(length = length(label(ddata)$x)) + 300
+for (i in seq(1, length(tmpx))) {
+  if (res[tmpx[i]] > tmpy[i]) {
+    res[tmpx[i]] <- tmpy[i]
   }
 }
 res
-col.text <- rep("red",64)
-col.text[(label(ddata)$label == "UNKNOWN")|
-           (label(ddata)$label == "K562A-repro")|
-           (label(ddata)$label == "K562B-repro")|
-           (label(ddata)$label == "MCF7A-repro")|
-           (label(ddata)$label == "MCF7D-repro")] = "blue"
+col.text <- rep("red", 64)
+col.text[(label(ddata)$label == "UNKNOWN") |
+  (label(ddata)$label == "K562A-repro") |
+  (label(ddata)$label == "K562B-repro") |
+  (label(ddata)$label == "MCF7A-repro") |
+  (label(ddata)$label == "MCF7D-repro")] <- "blue"
 
-p <- ggplot(segment(ddata))+
-  geom_segment(aes(x = x, y = y, xend = xend, yend = yend))+
-  geom_text(data = label(ddata), angle = 90,
-            aes(x = x, y = res, label = label),colour = col.text, vjust = 0.5,hjust = 1, size = 2)+
-  scale_colour_discrete(c("blue","red"))+
-  ylim(c(0,max(segment(ddata)$y)))+
-  theme_minimal()+
-  theme(axis.title.x = element_blank(),
-        axis.text.x = element_blank(),
-        axis.ticks = element_blank(),
-        axis.line.y = element_line(color = "black", 
-                                   size = 1, linetype = "solid"))
-  
+p <- ggplot(segment(ddata)) +
+  geom_segment(aes(x = x, y = y, xend = xend, yend = yend)) +
+  geom_text(
+    data = label(ddata), angle = 90,
+    aes(x = x, y = res, label = label),
+    colour = col.text, vjust = 0.5, hjust = 1, size = 2
+  ) +
+  scale_colour_discrete(c("blue", "red")) +
+  ylim(c(0, max(segment(ddata)$y))) +
+  theme_minimal() +
+  theme(
+    axis.title.x = element_blank(),
+    axis.text.x = element_blank(),
+    axis.ticks = element_blank(),
+    axis.line.y = element_line(
+      color = "black",
+      size = 1, linetype = "solid"
+    )
+  )
+
 p
 ```
-The `K562` cells are clearly clustered together with only the `LEUKEMIA` cells, which is what we should expect because `K562` is in the `LEUKEMIA`family. Looking at the `MCF7` they are clustered together with `BREAST` cells, though these cells are spread out on the right side of the tree, it fits the fact that we know they `MCF7` are part of the `BREAST` familiy. The `UKNOWN`cells are clustered together with the `OVARIAN` cells, it also branches in to a bigger cluster of `OVARIAN` leafs. It is also in close connection to `NSCLC` and `MELANOMA`, but looks to either be a `OVARIAN` cell or in familiy with. 
+The `K562` cells are clearly clustered together with only the `LEUKEMIA` cells, which is what we should expect because `K562` is in the `LEUKEMIA` family. Looking at the `MCF7` they are clustered together with `BREAST` cells, though these cells are spread out on the right side of the tree, it fits the fact that we know they `MCF7` are part of the `BREAST` familiy. The `UNKNOWN`  cells are clustered together with the `OVARIAN` cells, it also branches in to a bigger cluster of `OVARIAN` leafs. It is also in close connection to `NSCLC` and `MELANOMA`, but looks to either be a `OVARIAN` cell or in familiy with. 
   
   **Q27:**: Study the R-code and plot below. Here we have performed hierarchical clustering based on the first 64 principal component instead of the gene expression data in `Z`. What is the difference between using all the gene expression data and using the first 64 principal components in the clustering? We have plotted the dendrogram together with a heatmap of the data. Explain what is shown in the heatmap. What is given on the horizontal axis, vertical axis, value in the pixel grid?
 
-From earlier questions we know that the principal components can be found by the equation $\vect{y}_k = \vect{z}_k \matr{V}$. The most significant difference between using the principal components versus the scaled observations, is computation time. The distanes betweeen points in the PC-space is the same as in the orthogonal space, because of the orthonormal matrix. 
+From earlier questions we know that the principal components can be found by the equation $\vect{y}_k = \vect{z}_k \matr{V}$. The most significant difference between using the principal components versus the scaled observations, is computation time. The distanes between points in the PC-space is the same as in the orthogonal space, because of the orthonormal matrix. 
 
-In the figure below the result of running the hierarchical clustering algorithm with the principal components is shown. On the left side of the figure a dendogram explaining the partitioning is displayed. The rows in both the dendogram and the heatmap corresponnds to the names of the cells on the vertical axes to the right in the figure. Along the horistonal axes the principal components are displayed, with `PC1` furthest to the left. The principal components and the cell types form a grid system in the main plot, and the color of which corresponds to the \textit{principal component scores}. Red color indicates high positive scores and blue colors indicate high negative scores while zero score is a light yellow or white color. We can by this knowledge say that there are more variances in the first few principal components and they become more similiar in the later principal components, with the last elements $64$ having $0$ variance, which corresponds to the points having the same color. This what we concluded earlier in the exercise, only explained visually. 
+In the figure below the result of running the hierarchical clustering algorithm with the principal components is shown. On the left side of the figure a dendogram explaining the partitioning is displayed. The rows in both the dendogram and the heatmap corresponds to the names of the cells on the vertical axes to the right in the figure. Along the horizontal axes the principal components are displayed, with `PC1` furthest to the left. The principal components and the cell types form a grid system in the main plot, and the color corresponds to the \textit{principal component scores}. Red color indicates high positive scores and blue colors indicate high negative scores while zero score is a light yellow or white color. We can by this knowledge say that there are more variances in the first few principal components and they become more similiar in the later principal components, with the last elements $64$ having $0$ variance, which corresponds to the points having the same color. This what we concluded earlier in the exercise, only explained visually. 
 ```{r}
 library(pheatmap)
 npcs=64 
-pheatmap(pca$x[,1:npcs],scale="none",cluster_col=FALSE,cluster_row=TRUE,clustering_distance_rows = "euclidean",clustering_method="average",fontsize_row=5,fontsize_col=5)
+pheatmap(pca$x[,1:npcs],scale="none",cluster_col=FALSE,
+         cluster_row=TRUE,clustering_distance_rows = "euclidean",
+         clustering_method="average",fontsize_row=5,fontsize_col=5)
 ```
 
 # Problem 3: Flying solo with diabetes data [6 points]
@@ -649,7 +659,7 @@ train_df <- ctrain %>%
 train_df %>%
   GGally::ggcorr()
 ```
-We proceed by splitting the dataset into two parts, one where $\textrm{diabetes} = 1$ and another one where $\textrm{diabetes} = 0$. By creating boxplots for each of these cases we can inspect if there's any observable difference between the mean and variance of the covariates when the data is grouped by the value of $\textrm{diabetes}$. We immediately observe that the mean $\textrm{glu}$ is considerably higher for the group where $\textrm{diabetes} = 1$. The differences are not as clear for the other covariates, but it's worth noting that the mean value of $\textrm{skin}$ and $\textrm{bp}$ also seems to higher for the group with $\textrm{diabetes} = 1$.
+We proceed by splitting the dataset into two parts, one where $\textrm{diabetes} = 1$ and another one where $\textrm{diabetes} = 0$. By creating boxplots for each of these cases we can inspect if there's any observable difference between the mean and variance of the covariates when the data is grouped by the value of $\textrm{diabetes}$. We immediately observe that the mean $\textrm{glu}$ is considerably higher for the group where $\textrm{diabetes} = 1$. The differences are not as clear for the other covariates, but it's worth noting that the mean value of $\textrm{skin}$ and $\textrm{bp}$ also seems to be higher for the group with $\textrm{diabetes} = 1$.
 
 ```{r, fig.cap="Boxplot for dataset grouped by $\\textrm{diabetes}$"}
 
@@ -661,7 +671,6 @@ train_df %>%
 ```
 
 The next plot provides further insight into the importance of $\textrm{glu}$ and $\textrm{skin}$. There's a clear structure in the plot below, showing that the fraction of people with diabetes increases as the values of $\textrm{skin}$ and $\textrm{glu}$ increase.
-There's 
 
 ```{r}
 train_df %>%
@@ -1033,13 +1042,14 @@ roc_curve(results, truth, estimated_class_probs) %>%
 conf_mat(results, truth, estimated_class) %>%
   autoplot("heatmap")
 ```
+
 ## Support vector machine
 
 We proceed by considering a support vector classifier. This algorithms constructs a hyperplane that attempts to separate the data. The hyperplane is constructed by maximizing the margin $M$ subject to a number a constraints. 
 
 The hyperplane is defined by $f(\mathbf{x} \mid \mathbf{\beta}) = \beta_0 + \sum_{i=1}^n\beta_ix_i = 0$. By calculating $\textrm{sign}\left(f(\mathbf{x} \mid \mathbf{\beta})\mid_{\mathbf{x}=\mathbf{x}_{i}}\right)$ we obtain the predicted class, given that classes are encoded as $Y \in \{-1, 1\}$. In other words, the observations are classified by looking at which side of the hyperplane the observation is located. 
 
-Based on our observation in the first section, where we observed that $\text{skin}$ and $\text{skin}$ seems to increase the chance of $\text{diabetes} = 0$, we choose a polynomial decision boundary. The scatter plot of the mentioned covariates indicates that a linear decision boundary could do a good job of predicting the value of $\text{diabetes}$. 
+Based on our observation in the first section, where we observed that $\text{skin}$ and $\text{glu}$ seems to increase the chance of $\text{diabetes} = 0$, we choose a polynomial decision boundary. The scatter plot of the mentioned covariates indicates that a linear decision boundary could do a good job of predicting the value of $\text{diabetes}$. 
 
 The procedure for finding the hyperplane consists of maximizing the margin $M$ subject to a set of constraints. The margin $M$ determines how far away from the hyperplane a point must be before it stops having an impact on the construction of the hyperplane. The related optimization problem becomes 
 
@@ -1051,7 +1061,7 @@ y_i(\beta_0 + \sum_{i=1}^n\beta_ix_{ip}) \geq M(1 - \epsilon_i) \ \forall i = 1,
 \sum_{i=1}^n\epsilon_i \leq C
 \end{align*}
 
-We use K - fold cross validation to determine the parameters, with $K = 5$. 
+We use K - fold cross validation to determine the parameters, with $K = 5$. The hyperparameters are referred to as $\texttt{cost}$ and $\texttt{degree}$ in the code and refer to the hyperparameter $C$ and the degree of the decision boundary respectively.
 
 ```{r}
 
@@ -1146,7 +1156,7 @@ conf_mat(results, truth, estimated_class) %>%
 
 A fully-connected feedforward neural network consists of a series of hidden layers, with each layer consisting of a given number of units. Given an input vector $\mathbf{X}$, each unit in the first layer computes an output $\phi\left(\mathbf{X}\mathbf{w}_i + b_i\right)$. The function $\phi$ is referred to as the activation function. The output of the entire layer is then either passed to another hidden layer, where the process is repeated, or used as the final output. The weights of the different layers in the network, $\mathbf{W} = \begin{bmatrix} w_1,\ldots,w_n\end{bmatrix}^T$ and $\mathbf{b}$, can be estimated by minimizing a loss function with respect to the weights. This is done by computing the gradient of the loss function through a technique known as backpropagation, and applying a numerical optimization method in order to minimize the loss function. 
 
-In the piece of code below we will fit a neural network with a single layer, which is also known as a multi-layer perceptron. The number of units and weight regularization parameter in this layer is chosen through the use of cross-validation with $K = 5$ folds. The weight regularization parameter changes the loss function by penalizing the size of the weights. We use the softmax - function as the activation function. The cross-validation with a single layer is done below. 
+In the piece of code below we will fit a neural network with a single layer, which is also known as a multi-layer perceptron. The number of units and weight regularization parameter in this layer is chosen through the use of cross-validation with $K = 5$ folds. The weight regularization parameter changes the loss function by penalizing the size of the weights. We use the softmax - function as the activation function. The cross-validation with a single layer is done below. The weight regularization parameter is referred to as $\texttt{penalty}$ in the code, while the number of units in the hidden layer is referred to as $\texttt{units}$. 
 
 
 ```{r}
@@ -1207,18 +1217,12 @@ nn_estimator <- mlp(
 
 
 results <- tibble(
-  estimated_class = svm_estimator %>%
+  estimated_class = nn_estimator %>%
     predict(
       new_data = test_scaled,
       type = "class"
     ) %>%
     pull(.pred_class),
-  estimated_class_probs = svm_estimator %>%
-    predict(
-      new_data = test_scaled,
-      type = "prob"
-    ) %>%
-    pull(.pred_1),
   truth = test_scaled %>%
     pull(diabetes)
 )
@@ -1227,13 +1231,6 @@ accuracy(results, truth, estimated_class) %>%
   select(.metric, .estimate) %>%
   knitr::kable(col.names = c("Metric", "Estimate"))
 
-
-roc_auc(results, truth, estimated_class_probs) %>%
-  select(.metric, .estimate) %>%
-  knitr::kable(col.names = c("Metric", "Estimate"))
-
-roc_curve(results, truth, estimated_class_probs) %>%
-  autoplot()
 
 conf_mat(results, truth, estimated_class) %>%
   autoplot("heatmap")
