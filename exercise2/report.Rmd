@@ -2,25 +2,20 @@
 title: 'Compulsory exercise 2: Group XYZ'
 author: "NN1, NN2 and NN3"
 date: "`r format(Sys.time(), '%d %B, %Y')`"
-output:
-  html_document: default
-<<<<<<< HEAD
-  pdf_document: default
-=======
-  # pdf_document: default
->>>>>>> Solve problem 1
 subtitle: TMA4268 Statistical Learning V2019
+output:
   pdf_document:
     latex_engine: xelatex
     keep_tex: true
+  html_document: default
 header-includes:
   - \newcommand{\matr}[1]{\boldsymbol{#1}}
   - \usepackage{bm}
   - \usepackage[a]{esvect}
-  - \renewcommand{\vect}[1]{\vv{\bm{#1}}}
+  - \newcommand{\vect}[1]{\vv{\bm{#1}}}
 ---
   
-  ```{r setup, include=FALSE}
+```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 knitr::opts_chunk$set(error=FALSE)
 knitr::opts_chunk$set(warning=FALSE)
@@ -450,18 +445,9 @@ different sizes (`yy`) is an easy way to make predictions that are not very
 good. The random forest shows the importance of interactions, which makes sense
 intuitively (see Q19).
   
-<<<<<<< HEAD
-  
-  # Problem 2: Unsupervised learning [3 points]
-  
-  **Q21:** What is the definition of a principal component score, and how is the score related to the eigenvectors of the matrix ${\hat {\bf R}}$. 
-=======
 # Problem 2: Unsupervised learning [3 points]
-
+  
 **Q21:** What is the definition of a principal component score, and how is the score related to the eigenvectors of the matrix ${\hat {\bf R}}$. 
-
-**Q22:** Explain what is given in the plot with title "First eigenvector". Why are there only $n=64$ eigenvectors and $n=64$ principal component scores?
->>>>>>> Solve problem 1
   
   The data is given in the matrix $\matr{X}$, of size $n \times p$, where the columns are points in space. The columns are then scaled and shifted to mean $0$ and variance $1$, and we then have a standardized version of the observations $\matr{Z}$, of size $n \times p$. From this standardized matrix we can estimate the gene-standardized covariance matrix $\matr{\hat{R}}$ of size $p \times p$ by the equation 
   $$
@@ -514,10 +500,6 @@ plot(1:dim(X)[2],pca$rotation[,1],type="l",xlab="genes",ylab="weight",main="Firs
 $$
 R^2 =\frac{\sum_{i=1}^M \lambda_i}{\sum_{j=1}^p \lambda_j}  
 $$
-To find at which number of \textit{principal components}, they explain $80\%$ of to total variance we need to write some code to calculate it. And this is done in the code below. The result of which is $\textrm{# PC}$``r res_i``. 
-The reason `sum(pca$sdev^2)=p` is because of our scaling. The variance has been scaled to $1$ and therefore by the $\sum_{i=1}^p 1 = p$.
-
-
 
 ```{r}
 # calculating the number of PC to explain 80% of the variance
@@ -529,6 +511,10 @@ for (i in seq(1,length(quotient_variance))){
   }
 }
 ```
+
+To find at which number of \textit{principal components}, they explain $80\%$ of to total variance we need to write some code to calculate it. This is done in the code above. The result of which is `r res_i``. 
+The reason `sum(pca$sdev^2)=p` is because of our scaling. The variance has been scaled to $1$ and therefore by the $\sum_{i=1}^p 1 = p$.
+
 
   **Q24**: Study the PC1 vs PC2 plot, and comment on the groupings observed. What can you say about the placement of the `K262`, `MCF7` and `UNKNOWN` samples? Produce the same plot for two other pairs of PCs and comment on your observations.
 
@@ -554,10 +540,6 @@ legend("bottomright",legend = colsvsnames[,2],cex=0.55,col=cols,pch = pch.vec)
 
 
 **Q25:**: Explain what it means to use Euclidean distance and average linkage for hierarchical clustering. 
-<<<<<<< HEAD
-=======
-Euclidean distance is the distance between points in a space of two or three dimensions. The average linkage is the mean intercluster dissimiliarity. Which means that we use the average dissimiliarty between pairs of clusters. <span style="color:red">Mangler forklaring på hvordan clustere bygges (greedy måte, slår sammen clustere som øker average linkage minst)</span>
->>>>>>> Solve problem 1
 
 We first look at the average linkage. The algorithm for hierarchical clustering is given by
 
@@ -585,7 +567,7 @@ $$
 with $n_{C_k}$ being the number of points in cluster number $k$, with the points having dimension $P$. The Euclidean distance is given by $||x_1- x_2||_2 = \sqrt{(x_1^2 + x_2^2)}$. Using this on the scaled observations $\matr{Z}$, one would end up with the partition shown in Figure \ref{fig:dendogram}.
 
 **Q26:**: Perform hierarchical clustering with Euclidean distance and average linkage on the scaled gene expression in `Z`. Observe where our samples labelled as `K562`, `MCF7` and `UNKNOWN` are placed in the dendrogram. Which conclusions can you draw from this?
-```{r, fig.cap = "\\label{fig:dendogram} Dendogram of hierarchical clustering with euclidean distance and average linkage on \matr{Z}"}
+```{r, fig.cap = "\\label{fig:dendogram} Dendogram of hierarchical clustering with euclidean distance and average linkage on \\matr{Z}"}
 library(ggplot2)
 library(ggdendro)
 library(tidyverse)
@@ -678,19 +660,15 @@ train_df %>%
   geom_boxplot() + 
   facet_wrap(~diabetes)
 ```
-<<<<<<< HEAD
+
 The next plot provides further insight into the importance of $\textrm{glu}$ and $\textrm{skin}$. There's a clear structure in the plot below, showing that the fraction of people with diabetes increases as the values of $\textrm{skin}$ and $\textrm{glu}$ increase.
 There's 
-=======
-The next plot provides further insight into the importance of $\textrm{glu}$ and $\textrm{skin}$. There's a clear structure in the plot below, showing that the fraction of people with diabetes increases drastically as the values of $\textrm{skin}$ and $\textrm{glu}$ increase. <span style="color:red">geom_jitter legger på randomness, kanskje heller bruke geom_points?</span>
->>>>>>> Solve problem 1
 
 ```{r}
 train_df %>%
   ggplot(aes(x = glu, y = skin, color = diabetes)) +
   geom_jitter()
 ```
-
 
 
 
@@ -1219,8 +1197,4 @@ history %>% plot() + xlim(0, length(history$metrics$acc))
 
 **Q30:** Conclude with choosing a winning method, and explain why you mean that this is the winning method.
 
-<<<<<<< HEAD
 Logistic regression achieves the highest accuracy and the highest AUC. The other methods are not far behind, but has additional disadvantages that make them less attractive. Logistic regression is fairly easy to interpret due to relation between the success probability and the values of the covariates. The random forest is harder to interpret due to the high number of trees that are involved. The random nature of the random forest is also a downside. The support vector classifier is very easy to interpret for $p = 2$ and $p = 3$, but becomes harder to both visualize and explain for high-dimensional data. Neural networks are notoriously hard to interpret due to it's very complex structure. This, in combination with it's inability to reliably perform better than the logistic regression, makes it less desirable than the logistic regression in this case. When taking all of this into account we're led to choose the logistic regression as the best model for this particular problem. 
-=======
-**Q30:** Conclude with choosing a winning method, and explain why you mean that this is the winning method.
->>>>>>> Solve problem 1
