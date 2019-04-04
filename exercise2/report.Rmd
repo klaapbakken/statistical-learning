@@ -834,14 +834,14 @@ scaled_folds <- train_df %>%
 
 
 
-# Logistic regression
+## Logistic regression
 
 The first method we want to explore is logistic regression. Logstic regression assumes that the response takes on values in $\{0, 1\}$. In addition, we assume that $Y_i, i = 1,\ldots, n$ is Bernoulli - distributed with sucess probability $p_i$. The logistic function has the form
 
 $$
-p_i = \frac{\exp{\left(\beta_0 + \sum_{n=1}^p\beta_px_p\right)}}{1 + \exp{\left(\beta_0 + \sum_{n=1}^p\beta_px_p\right)}},
+p_i = \frac{\exp{\left(\beta_0 + \sum_{n=1}^q\beta_nx_{n}\right)}}{1 + \exp{\left(\beta_0 + \sum_{n=1}^q\beta_nx_n\right)}},
 $$
-where $p$ is the number of covariates. In our case we have $p = 7$.  The different values of $\mathbf{\beta}$ are obtained by maximizing the likelihood function $L(\mathbf{\beta} \mid \ \mathbf{x}) = \prod_{i=1}^nf(x_i \mid \mathbf{\beta})$, where $f(x_i \mid \mathbf{\beta})$ is the Bernoulli - pmf with parameter $p_i$ as shown above. The maximation is done using a numerical optimization algorithm - typically by the use of either Fisher scoring or the Newton-Rahpson method. 
+where $q$ is the number of covariates. In our case we have $q = 7$.  The different values of $\mathbf{\beta}$ are obtained by maximizing the likelihood function $L(\mathbf{\beta} \mid \ \mathbf{x}) = \prod_{i=1}^nf(x_i \mid \mathbf{\beta})$, where $f(x_i \mid \mathbf{\beta})$ is the Bernoulli - pmf with parameter $p_i$ as shown above. The maximation is done using a numerical optimization algorithm - typically by the use of either Fisher scoring or the Newton-Rahpson method. 
 
 It's not necessarily desirable to include all covariates in the model. In order to find a model that performs well without being unnecessarily complex we calculate the AIC for the possible models and choose the model that maximizes AIC as the final model. 
 
@@ -910,16 +910,16 @@ conf_mat(class_pred, truth, estimate) %>%
   autoplot("heatmap")
 ```
 
-# Random forest
+## Random forest
 
-We proceed by fitting a random forest to our data. A random forest consists $B$ decision trees. The decision tree has parameters determing how many samples there needs to be in a leaf node before we can split further. This is a tuning parameter, called $\texttt{min\_n}$ in the code below. Only $m, m < p$ randomly chosen covariates can be considered at each split. This is also a tuning parameter, called $\texttt{mtry}$ below. When splitting a node we want to minimize the Gini index, given by
+We proceed by fitting a random forest to our data. A random forest consists of $B$ decision trees. The decision tree has parameters determing how many samples there needs to be in a leaf node before we can split further. This is a tuning parameter, called $\texttt{min\_n}$ in the code below. Only $m, m < p$ randomly chosen covariates can be considered at each split. This is also a tuning parameter, called $\texttt{mtry}$ below. When splitting a node we want to minimize the Gini index, given by
 
 $$
 G = \sum_{k=1}^K\hat{p}_{jk}(1-\hat{p}_{jk})
 $$
 for leaf node $j$. 
 
-The parameters are found through the use of K - fold cross validation, with $K = 5$. The parameter search is by no means exhaustive, but the should be sufficient for our purpose. The number of trees is fixed at $B = 100$, seeing as this is not a tuning parameter and it's common to simple set to be "high enough". By taking a look at the mean decrease in the Gini index for the diffiferent covariates, we observe that $\textrm{bmi}$ and $\textrm{glu}$ are, again, very important. The covariates $\text{ped}$ and $\text{ped}$ also seem to be fairly important.
+The parameters are found through the use of K - fold cross validation, with $K = 5$. The parameter search is by no means exhaustive, but the should be sufficient for our purpose. The number of trees is fixed at $B = 100$, seeing as this is not a tuning parameter and it's common to simple set to be "high enough". By taking a look at the mean decrease in the Gini index for the diffiferent covariates, we observe that $\textrm{bmi}$ and $\textrm{glu}$ are, again, very important. The covariates $\text{ped}$ and $\text{age}$ also seem to be fairly important.
 
 ```{r}
 library(parsnip)
@@ -975,7 +975,9 @@ best_params <- rf_param_df %>%
   select(mtry, trees, min_n) %>%
   head(1)
 
-best_params %>% knitr::kable()
+best_params %>%
+  select(mtry, min_n) %>%
+  knitr::kable(caption="Best parameters for random forest")
 
 
 # Fitting a model using the entire test set, with
@@ -999,7 +1001,6 @@ The accuracy and AUC is shown below, together with plots of the ROC curve and th
 
 
 ```{r}
-
 
 results <- tibble(
   estimated_class = rf_estimator %>%
@@ -1033,7 +1034,7 @@ roc_curve(results, truth, estimated_class_probs) %>%
 conf_mat(results, truth, estimated_class) %>%
   autoplot("heatmap")
 ```
-#Support vector machine
+## Support vector machine
 
 We proceed by considering a support vector classifier. This algorithms constructs a hyperplane that attempts to separate the data. The hyperplane is constructed by maximizing the margin $M$ subject to a number a constraints. 
 
@@ -1043,13 +1044,13 @@ Based on our observation in the first section, where we observed that $\text{ski
 
 The procedure for finding the hyperplane consists of maximizing the margin $M$ subject to a set of constraints. The margin $M$ determines how far away from the hyperplane a point must be before it stops having an impact on the construction of the hyperplane. The related optimization problem becomes 
 
-$$
+\begin{align*}
 \max_{\mathbf{\beta}, \mathbf{\epsilon}}M\quad\text{ subject to} \\
 \mathbf{\beta}^T\mathbf{\beta} = 1 \\
 y_i(\beta_0 + \sum_{i=1}^n\beta_ix_{ip}) \geq M(1 - \epsilon_i) \ \forall i = 1,\ldots,n\\
 \epsilon_i \geq 0 \\
 \sum_{i=1}^n\epsilon_i \leq C
-$$
+\end{align*}
 
 We use K - fold cross validation to determine the parameters, with $K = 5$. 
 
@@ -1084,7 +1085,10 @@ svm_param_df <- svm_param_df %>%
   mutate(accuracy = cv_list %>%
     map_dbl(validation_score))
 
-svm_param_df %>% filter(accuracy == max(accuracy))
+svm_param_df %>%
+  filter(accuracy == max(accuracy)) %>%
+  select(cost, degree) %>% 
+  knitr::kable(caption = "Best parameters for SVC")
 
 best_accuracy <- svm_param_df %>% filter(accuracy == max(accuracy)) %>% select(accuracy)
 
@@ -1139,61 +1143,102 @@ conf_mat(results, truth, estimated_class) %>%
   autoplot("heatmap")
 ```
 
-#Neural network
+## Neural network
 
 A fully-connected feedforward neural network consists of a series of hidden layers, with each layer consisting of a given number of units. Given an input vector $\mathbf{X}$, each unit in the first layer computes an output $\phi\left(\mathbf{X}\mathbf{w}_i + b_i\right)$. The function $\phi$ is referred to as the activation function. The output of the entire layer is then either passed to another hidden layer, where the process is repeated, or used as the final output. The weights of the different layers in the network, $\mathbf{W} = \begin{bmatrix} w_1,\ldots,w_n\end{bmatrix}^T$ and $\mathbf{b}$, can be estimated by minimizing a loss function with respect to the weights. This is done by computing the gradient of the loss function through a technique known as backpropagation, and applying a numerical optimization method in order to minimize the loss function. 
 
-When fitting the neural network to diabetes - classification problem we use the rectified linear unit $\phi(x) = \max(0, x)$ as the activation function in the hidden layers and the sigmoid function $\phi(x) = \frac{1}{1 + e^{-x}}$ in the output layer. 
-We use binary crossentropy as the loss function, seeing as this is the common choice for binary classification tasks. In order to avoid overfitting, which is a common problem with neural networks, we stop our training as seen as the loss computed on the validation set starts declining. 
+In the piece of code below we will fit a neural network with a single layer, which is also known as a multi-layer perceptron. The number of units and weight regularization parameter in this layer is chosen through the use of cross-validation with $K = 5$ folds. The weight regularization parameter changes the loss function by penalizing the size of the weights. We use the softmax - function as the activation function. The cross-validation with a single layer is done below. 
 
 
-```{r, eval=FALSE}
-library(keras)
-use_condaenv("base")
+```{r}
 
-nn_train <- train_scaled %>%
-  mutate(id = row_number())
-
-nn_val <- nn_train %>%
-  sample_frac(size = 0.2)
-
-nn_train <- nn_train %>%
-  anti_join(nn_val, by = "id")
-
-input_tensor <- layer_input(shape = ncol(nn_train %>% select(-c(diabetes, id))))
-output_tensor <- input_tensor %>%
-  layer_dense(units = 8, activation = "relu") %>%
-  layer_dense(units = 4, activation = "relu") %>%
-  layer_dense(units = 1, activation = "sigmoid")
-
-model <- keras_model(input_tensor, output_tensor)
-summary(model)
-
-model %>% compile("Adam", loss = "binary_crossentropy", metrics = c("accuracy"))
-
-history <- model %>% fit(nn_train %>% select(-c(diabetes, id)) %>% as.matrix(),
-  nn_train %>% select(diabetes) %>% as.matrix(),
-  validation_data = list(
-    nn_val %>% select(-c(diabetes, id)) %>% as.matrix(),
-    nn_val %>% select(diabetes) %>% as.matrix()
-  ),
-  callbacks = list(callback_early_stopping()),
-  batch_size = 1, epochs = 50,
-  view_metrics = FALSE
+nn_param_df <- cross_df(
+  list(
+    units =  c(1, 2, 4, 8),
+    penalty = seq(-1, 3) %>% map(~10^-.x)
+    
+  )
 )
 
-model %>% evaluate(
-  test_scaled %>% select(-diabetes) %>% as.matrix(),
-  test_scaled %>% select(diabetes) %>% as.matrix()
+model_list <- nn_param_df %>%
+  as.list() %>%
+  pmap(
+    function(
+                 units,
+                 penalty)
+      mlp(
+        mode = "classification",
+        hidden_units = units,
+        penalty = penalty
+      ) %>%
+        set_engine("nnet")
+  )
+
+cv_list <- model_list %>% map(predict_on_folds,
+  folds = scaled_folds
 )
 
-(model %>% predict(
-  test_scaled %>% select(-diabetes) %>% as.matrix()
-) %>% map_int(~.x > 0.5) == test_scaled %>% pull(diabetes)) %>% mean() 
+nn_param_df <- nn_param_df %>%
+  mutate(accuracy = cv_list %>%
+    map_dbl(validation_score))
 
-history %>% plot() + xlim(0, length(history$metrics$acc))
+nn_param_df %>%
+  filter(accuracy == max(accuracy)) %>% 
+  select(units, penalty) %>%
+  knitr::kable(caption = "Best parameters for NN")
+
+best_accuracy <- nn_param_df %>% filter(accuracy == max(accuracy)) %>% select(accuracy)
+
+best_params <- nn_param_df %>%
+  mutate(index = row_number()) %>%
+  filter(accuracy == max(accuracy)) %>%
+  select(units, penalty) %>%
+  head(1)
+
+nn_estimator <- mlp(
+  mode = "classification",
+  hidden_units = best_params %>% pull(units),
+  penalty = best_params %>% pull(penalty)
+) %>%
+  set_engine("nnet") %>%
+  fit(
+    formula = formula(scaled_prepped),
+    data = train_scaled
+  )
+
+
+results <- tibble(
+  estimated_class = svm_estimator %>%
+    predict(
+      new_data = test_scaled,
+      type = "class"
+    ) %>%
+    pull(.pred_class),
+  estimated_class_probs = svm_estimator %>%
+    predict(
+      new_data = test_scaled,
+      type = "prob"
+    ) %>%
+    pull(.pred_1),
+  truth = test_scaled %>%
+    pull(diabetes)
+)
+
+accuracy(results, truth, estimated_class) %>%
+  select(.metric, .estimate) %>%
+  knitr::kable(col.names = c("Metric", "Estimate"))
+
+
+roc_auc(results, truth, estimated_class_probs) %>%
+  select(.metric, .estimate) %>%
+  knitr::kable(col.names = c("Metric", "Estimate"))
+
+roc_curve(results, truth, estimated_class_probs) %>%
+  autoplot()
+
+conf_mat(results, truth, estimated_class) %>%
+  autoplot("heatmap")
 ```
-
 
 **Q30:** Conclude with choosing a winning method, and explain why you mean that this is the winning method.
 
